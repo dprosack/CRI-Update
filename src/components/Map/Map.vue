@@ -1,8 +1,8 @@
 <template>
     <div id="viewDiv" class="main">
-        
+        <mileageReport></mileageReport>
         <div id="info" class="esri-widget">
-            <button @click="addRoad()">{{addButton}}</button>
+            <v-btn elevation="2" @click="addRoad()">{{addButton}}</v-btn>
              <div>
                 <h2>County Mileage</h2>
                 <p v-cloak>County: {{county}} / User Name: {{username}}</p>
@@ -17,12 +17,16 @@
 <script>
 
 import {addRoadbed} from '../Map/editFunc'
+import mileageReport from './mileageReport.vue'
+
 //import { gLayer } from '../Map/map';
 //import Graphic from "@arcgis/core/Graphic";
 //import * as geometryEngine from "@arcgis/core/geometry/geometryEngine";
 
 export default {
     name: 'Map',
+    components: {mileageReport
+    },
     props:{
         addRoadbed: Function,
         addLen: Function
@@ -49,7 +53,7 @@ export default {
             {
                 this.previousTotal === 0 ? this.previousTotal += parseFloat(result.toFixed(3)) : this.previousTotal
             })
-        }
+        },
     },
 
     watch:{

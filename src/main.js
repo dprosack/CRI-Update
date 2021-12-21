@@ -3,8 +3,10 @@ import App from './App.vue'
 
 import '@arcgis/core/assets/esri/themes/light/main.css';
 
+import vuetify from './plugins/vuetify'
 Vue.config.productionTip = false
 
 new Vue({
+  vuetify,
   render: h => h(App),
 }).$mount('#app')
