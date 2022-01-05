@@ -1,13 +1,13 @@
 <template>
     <div id="viewDiv" class="main">
-        <mileageReport></mileageReport>
+        <mileageReport />
         <div id="info" class="esri-widget">
-            <v-btn elevation="2" @click="addRoad()">{{addButton}}</v-btn>
+            <v-btn elevation="2" @click="addRoad()" id="addBtn">{{addButton}}</v-btn>
              <div>
                 <h2>County Mileage</h2>
                 <p v-cloak>County: {{county}} / User Name: {{username}}</p>
                 <p v-cloak>Previous Total Mileage: {{countyTotal}}</p>
-                <p v-cloak>Current Mileage: {{previousTotal}}</p>
+                <p v-cloak>Current Mileage: {{currentMiles}}</p>
                 <p v-if="isNaN(countyTots) ? 0: countyTots">New Total Miles: {{countyTots}}</p>
             </div>
         </div>
@@ -16,7 +16,7 @@
 
 <script>
 
-import {addRoadbed} from '../Map/editFunc'
+import {addRoadbed, updateLength,modifyRoadbed, zoomExtents, hightlightFeat} from '../Map/editFunc'
 import mileageReport from './mileageReport.vue'
 
 //import { gLayer } from '../Map/map';
@@ -40,18 +40,21 @@ export default {
             countyTotal:120999,
             lineLength: {},
             newMiles: '',
-            modifyLine: true
+            modifyLine: 0,
+            modifyLength: 0
         }
     },
     async mounted() {
         const app = await import('../Map/map');
-        app.initialize(this.$el);  
+        app.initialize(this.$el); 
+        zoomExtents();
+        hightlightFeat();
+        
     },
     methods: {
         addRoad() {
-            addRoadbed().then(result=>
-            {
-                this.previousTotal === 0 ? this.previousTotal += parseFloat(result.toFixed(3)) : this.previousTotal
+            addRoadbed().then(result=>{
+            this.previousTotal += parseFloat(result.toFixed(3))
             })
         },
     },
@@ -59,13 +62,34 @@ export default {
     watch:{
        previousTotal() {
             addRoadbed().then(result=>
-            this.previousTotal += parseFloat(result.toFixed(3)))
-        }
+            this.previousTotal += parseFloat(result.toFixed(3))
+            )
+        },
+
+        modifyLine:{
+             handler: function(){
+                modifyRoadbed().then(result => 
+                this.modifyLine += parseFloat(result.toFixed(3)))
+            },
+            immediate: true,
+        },
+        
+       modifyLength:{
+            handler: function(){
+                updateLength().then(result => 
+                this.modifyLength += parseFloat(result.toFixed(3)))
+            },
+            immediate: true, 
+        },
     },
 
     computed:{
         countyTots: function(){
-            return this.countyTotal + this.previousTotal
+            return this.countyTotal + this.previousTotal + this.modifyLength + this.modifyLine
+        },
+
+        currentMiles: function(){
+            return this.previousTotal + this.modifyLength + this.modifyLine
         }
     }
 
@@ -73,6 +97,7 @@ export default {
 </script>
 
 <style scoped>
+
 #viewDiv {
     position: absolute;
     top: 0px;
