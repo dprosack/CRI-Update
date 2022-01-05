@@ -10,21 +10,18 @@ import Graphic from "@arcgis/core/Graphic";
 //get county name and road totals
 
 export async function countyInfo(){
-  let crPromise = new Promise(function(){
+  new Promise(function(res){
     let queryUrl = window.location.href
     let crInfo = queryUrl.split('?')[1].split('=')[1]
     console.log(crInfo)
     let crValidation = /^[0-9]{1,3}$/
     if(crValidation.test(crInfo)){
-      console.log('it passed')
+      res(true)
     }
     else{
-      alert("parameter is incorrect.  Please contact system admin.")
+      res(false)
     }
-    })
-
-   console.log(crPromise)
-
+  })
 }
 countyInfo()
 export async function addRoadbed(){

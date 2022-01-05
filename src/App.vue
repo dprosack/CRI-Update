@@ -1,25 +1,32 @@
 <template>
-  <v-app>
-    <Map />
-  </v-app>
+  <div id="app">
+    <div id="nav">
+      <router-link to="/">Home</router-link> |
+      <router-link to="/about">About</router-link>
+    </div>
+    <router-view/>
+  </div>
 </template>
 
-<script src="./plugins/fmeserver.js"></script>
-<script>
+<style lang="scss">
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+}
 
-import Map from './components/Map/Map.vue'
+#nav {
+  padding: 30px;
 
-export default {
-  name: 'App',
-  components: {
-    Map
-  },
+  a {
+    font-weight: bold;
+    color: #2c3e50;
 
-  mounted(){
-    let externalScript = document.createElement('script')
-    externalScript.setAttribute('src','http://api.fmeserver.com/js/v3/FMEServer.js')
-    document.head.appendChild(externalScript)
+    &.router-link-exact-active {
+      color: #42b983;
+    }
   }
 }
-</script>
-
+</style>
