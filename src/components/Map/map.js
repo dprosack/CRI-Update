@@ -9,7 +9,7 @@ import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 //import Graphic from "@arcgis/core/Graphic";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 // import * as geometryEngine from "@arcgis/core/geometry/geometryEngine";
-import SnappingOptions from "@arcgis/core/views/interactive/snapping/SnappingOptions";
+//import SnappingOptions from "@arcgis/core/views/interactive/snapping/SnappingOptions";
 
 export const gLayer = new GraphicsLayer();
 export const map = new Map({
@@ -41,8 +41,12 @@ export const featLayer = new FeatureLayer({
 
 export const txCounties = new FeatureLayer({
     url: criConstants.txCounties,
-    definitionExpression: "CNTY_NM= 'Travis'"
+    //definitionExpression: "CNTY_NM= 'Travis'"
     //effect: "blur(8px) brightness(1.2) grayscale(0.8)"
+})
+
+export const countyOfficialInfo = new FeatureLayer({
+    url: 'https://services.arcgis.com/KTcxiTD9dsQw4r7Z/arcgis/rest/services/CRI_County_Info_Test/FeatureServer/0'
 })
 
 export const sketch = new Sketch({
@@ -58,10 +62,10 @@ export const sketch = new Sketch({
           style: "dash"
         }
     }),
-    SnappingOptions: new SnappingOptions({
-        enabled: true,
-        featureSources: [featLayer]
-    })
+    // SnappingOptions: new SnappingOptions({
+    //     enabled: true,
+    //     featureSources: [featLayer]
+    // })
 });
 
 

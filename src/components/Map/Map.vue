@@ -1,6 +1,5 @@
-<template>
+<template class="map">
     <div id="viewDiv" class="main">
-        <mileageReport />
         <div id="info" class="esri-widget">
             <v-btn elevation="2" @click="addRoad()" id="addBtn">{{addButton}}</v-btn>
              <div>
@@ -17,7 +16,6 @@
 <script>
 
 import {addRoadbed, updateLength,modifyRoadbed, zoomExtents, hightlightFeat} from '../Map/editFunc'
-import mileageReport from './mileageReport.vue'
 
 //import { gLayer } from '../Map/map';
 //import Graphic from "@arcgis/core/Graphic";
@@ -25,8 +23,6 @@ import mileageReport from './mileageReport.vue'
 
 export default {
     name: 'Map',
-    components: {mileageReport
-    },
     props:{
         addRoadbed: Function,
         addLen: Function

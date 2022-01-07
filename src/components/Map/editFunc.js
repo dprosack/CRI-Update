@@ -1,8 +1,10 @@
 //import const from map.js
 import {sketch, view, featLayer, gLayer} from '../Map/map'
+import {cntyNbrNm} from '../../common/txCnt'
 //esri js geometry engine import
 import * as geometryEngine from "@arcgis/core/geometry/geometryEngine";
 import Graphic from "@arcgis/core/Graphic";
+//import Query from "@arcgis/core/rest/support/Query";
 
 
 
@@ -10,20 +12,31 @@ import Graphic from "@arcgis/core/Graphic";
 //get county name and road totals
 
 export async function countyInfo(){
-  new Promise(function(res){
+  return await new Promise(function(res){
     let queryUrl = window.location.href
-    let crInfo = queryUrl.split('?')[1].split('=')[1]
-    console.log(crInfo)
-    let crValidation = /^[0-9]{1,3}$/
-    if(crValidation.test(crInfo)){
-      res(true)
+    let crInfo = queryUrl.split('http://localhost:8080/')[1]
+    //console.log(crInfo.toString())
+    for (let j=0; j < cntyNbrNm.length; j++){
+      console.log(cntyNbrNm[j][crInfo])
+      if(cntyNbrNm[j][crInfo]){
+        res({response:true, nbr:parseInt(crInfo)})
+      }
+      else{
+        res({response:false})
+      }
     }
-    else{
-      res(false)
-    }
+    //let crValidation = /^[0-9]{1,3}$/
   })
 }
-countyInfo()
+
+// export async function getCntyInfo(){
+//   const query = new Query();
+//   query.where = "CNTY_NM= 'Travis'";
+  
+//   countyOfficialInfo.queryFeatures(query).then(result => console.log(result));  // prints the number of results satisfying the query
+  
+// }
+//getCntyInfo()
 export async function addRoadbed(){
     return await new Promise(function(res){
         sketch.create("polyline",{mode:"click", hasZ: false})

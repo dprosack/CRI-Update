@@ -1,12 +1,20 @@
 <template>
-  <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
+  
+    <div id="app">
+      <router-view/>
     </div>
-    <router-view/>
-  </div>
 </template>
+
+<script>
+import {countyInfo} from './components/Map/editFunc'
+
+export default {
+    name: 'App',
+    mounted(){
+      countyInfo().then(result => {result.response === true ? this.$router.push({ name: 'MileSign', params: { id: result.nbr}}) : this.$router.push('/catchAll(.*)')})
+    }
+}
+</script>
 
 <style lang="scss">
 #app {
