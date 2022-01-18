@@ -22,8 +22,6 @@ export const criConstants = {
     zoomLevel: 9,
 
     fmeurl: 'http://api.fmeserver.com/js/v3/FMEServer.js',
-    user: 'dprosack',
-    password: '26Fatdogg!88istHundchen',
     countyMiles:0,
     
 }
