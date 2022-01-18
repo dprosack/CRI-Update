@@ -1,18 +1,40 @@
 <template>
-  <v-app>
-    <Map />
-  </v-app>
+  
+    <div id="app">
+      <router-view/>
+    </div>
 </template>
 
 <script>
-
-import Map from './components/Map/Map.vue'
+import {countyInfo} from './components/Map/editFunc'
 
 export default {
-  name: 'App',
-  components: {
-    Map
-  }
+    name: 'App',
+    mounted(){
+      countyInfo().then(result => {result.response === true ? this.$router.push({ name: 'MileSign', params: { id: result.nbr}}) : this.$router.push('/catchAll(.*)')})
+    }
 }
 </script>
 
+<style lang="scss">
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+}
+
+#nav {
+  padding: 30px;
+
+  a {
+    font-weight: bold;
+    color: #2c3e50;
+
+    &.router-link-exact-active {
+      color: #42b983;
+    }
+  }
+}
+</style>
