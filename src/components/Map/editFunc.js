@@ -1,25 +1,31 @@
 //import const from map.js
-import {sketch, view, featLayer, gLayer} from '../Map/map'
+import {sketch, view, featLayer, gLayer, countyOfficialInfo} from '../Map/map'
 import {cntyNbrNm} from '../../common/txCnt'
 //esri js geometry engine import
 import * as geometryEngine from "@arcgis/core/geometry/geometryEngine";
 import Graphic from "@arcgis/core/Graphic";
-//import Query from "@arcgis/core/rest/support/Query";
+import Query from "@arcgis/core/rest/support/Query";
 
 
 
 //add login info
-//get county name and road totals
 
+//get county name and road totals
 export async function countyInfo(){
-  return await new Promise(function(res){
+  let countyInfoPromise =  new Promise(function(res){
     let queryUrl = window.location.href
     let crInfo = queryUrl.split('http://localhost:8080/')[1]
     //console.log(crInfo.toString())
     for (let j=0; j < cntyNbrNm.length; j++){
       console.log(cntyNbrNm[j][crInfo])
       if(cntyNbrNm[j][crInfo]){
-        res({response:true, nbr:parseInt(crInfo)})
+        let whereStatement = `County_NBR = '${crInfo}'`
+        console.log(whereStatement)
+        const query = new Query();
+        query.where = whereStatement
+        query.outFields = [ "*" ]
+        let newQuery = countyOfficialInfo.queryFeatures(query)
+        res({response:true, nbr:parseInt(crInfo), query:newQuery})
       }
       else{
         res({response:false})
@@ -27,16 +33,11 @@ export async function countyInfo(){
     }
     //let crValidation = /^[0-9]{1,3}$/
   })
+  
+  let countyInfoReturn = await countyInfoPromise;
+  return countyInfoReturn
 }
 
-// export async function getCntyInfo(){
-//   const query = new Query();
-//   query.where = "CNTY_NM= 'Travis'";
-  
-//   countyOfficialInfo.queryFeatures(query).then(result => console.log(result));  // prints the number of results satisfying the query
-  
-// }
-//getCntyInfo()
 export async function addRoadbed(){
     return await new Promise(function(res){
         sketch.create("polyline",{mode:"click", hasZ: false})
@@ -53,14 +54,13 @@ export async function addRoadbed(){
     }) 
 }
 
-export async function modifyRoadbed(){
+export async function modifyRoadbed(bool){
   let promise = new Promise(function(res){
     view.on("immediate-click", (event) => {
-      let opts ={ include: featLayer }
+      let opts = { include: featLayer }
       view.hitTest(event, opts).then(function(response){
         for(let i=0; i < response.results.length; i++){
           if(response.results[i].graphic.geometry !== null && response.results[i].graphic.sourceLayer !== null){
-            console.log(response.results[i])
             let queryFeat = featLayer.queryFeatures({
               objectIds: [response.results[0].graphic.attributes.objectid],
               outFields: ["*"],
@@ -75,9 +75,10 @@ export async function modifyRoadbed(){
   })
 
   let feature = await promise;
-  console.log(feature)
-  defineGraphic(feature)
-  return geometryEngine.geodesicLength(feature.features[0].geometry, "miles")
+  
+  defineGraphic(feature,bool)
+
+  return feature//geometryEngine.geodesicLength(feature.features[0].geometry, "miles")
 }
 
 export function zoomExtents(){
@@ -108,7 +109,9 @@ export function hightlightFeat(){
   })
 }
 
-function defineGraphic(graphics){
+function defineGraphic(graphics, dups){
+  if (dups === true){
+    
   let newGraphic = new Graphic({
     geometry: {
       type: "polyline",
@@ -135,9 +138,9 @@ function defineGraphic(graphics){
   for(let id in gLayer.graphics.items)
     if(gLayer.graphics.items[id].attributes !== null){
       objectidList.push(gLayer.graphics.items[id].attributes.objectid)
-      console.log(objectidList)
     }
-    featLayer.definitionExpression = `OBJECTID not in (${objectidList}) and cnty_nm = 'Travis'`
+    featLayer.definitionExpression = `OBJECTID not in (${objectidList}) and cnty_nm = '${graphics.features[0].attributes.cnty_nm}'`
+  }
 }
 
 export async function updateLength(){
@@ -147,8 +150,6 @@ export async function updateLength(){
       view.on('click', (evt)=>{
         let opts = {include: gLayer}
         view.hitTest(evt, opts).then(function(response){
-          console.log(response)
-          console.log(sketch)
           if(response.results.length){
             sketch.update(response.results[0].graphic,{tool: "reshape"})
 
@@ -156,7 +157,6 @@ export async function updateLength(){
               //console.log(event)
               if(event.state === "start"){
                 oldlengthMile = geometryEngine.geodesicLength(event.graphics[0].geometry, "miles")
-                console.log(oldlengthMile)
               }
               if(event.state === "complete"){
                 newlengthMiles = geometryEngine.geodesicLength(event.graphics[0].geometry, "miles")
@@ -164,17 +164,13 @@ export async function updateLength(){
 
               if(typeof oldlengthMile === "number" && typeof newlengthMiles === "number"){
                 let deltaLength = oldlengthMile - newlengthMiles
-                console.log(deltaLength);
                 if(oldlengthMile < newlengthMiles){
                   let addMiles = Math.abs(deltaLength)
-                  console.log(addMiles)
                   res(addMiles)
-                  console.log('add')
                 }
                 else if (oldlengthMile > newlengthMiles){
                   let subMiles = -Math.abs(deltaLength)
                   res(subMiles)
-                  console.log('subtract')
                 }
               }  
             })
