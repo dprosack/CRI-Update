@@ -14,7 +14,7 @@ import * as watchUtils from "@arcgis/core/core/watchUtils";
 export const gLayer = new GraphicsLayer();
 export const map = new Map({
     basemap: criConstants.basemap,
-    layers: [gLayer],
+    layers: [gLayer]
 });
 
 export const view = new MapView({
@@ -23,11 +23,13 @@ export const view = new MapView({
     zoom: 9,
     highlightOptions: {
         color: "orange"
-    }
+    },
 });
 
+view.ui.remove("zoom")
+
 export const featLayer = new FeatureLayer({
-    url: criConstants.portalUrl,
+    url: criConstants.refernceLayer,
     editingEnabled: true,
     geometryTypeRd: criConstants.geomType,
     //definitionExpression: "CNTY_NM= 'Travis'",
@@ -36,6 +38,19 @@ export const featLayer = new FeatureLayer({
     hasM: true,
     visible: false,
   });
+
+export const rdbdSrfcAsst = new FeatureLayer({
+    url: criConstants.assetLyrRdbSrf
+})
+export const rdbdDsgnAsst = new FeatureLayer({
+    url: criConstants.assetLyrRdbDsgn
+})
+export const rdbdNameAsst = new FeatureLayer({
+    url: criConstants.assetLyrRdbName
+})
+export const rdbdLaneAsst = new FeatureLayer({
+    url: criConstants.assetLyrRdbLane
+})
 
 export const txCounties = new FeatureLayer({
     url: criConstants.txCounties,
