@@ -9,12 +9,12 @@
       editable
       :complete="e1 > 1"
       step="1">
-      Road Attribution:
+      Road Name: 
       <small>Fill out this form to complete editing your road.</small>
     </v-stepper-step>
 
     <v-stepper-content step="1">
-      <v-card><v-text-field v-model="roadbedName" label="Road Name"></v-text-field>
+      <v-card><v-text-field v-model="roadbedName" label="Road Name" :disabled="graphic ? disabled : ''"></v-text-field>
       </v-card>
       <v-btn
         color="primary"
@@ -34,7 +34,7 @@
     </v-stepper-step>
 
     <v-stepper-content step="2">
-      <v-card><v-select v-model="roadbedDesign" :items="design" label="Design" outlined filled></v-select>
+      <v-card><v-select v-model="roadbedDesign" :items="design" label="Design" outlined filled :disabled="graphic ? disabled : ''"></v-select>
       </v-card>
       <v-btn
         color="primary"
@@ -45,17 +45,17 @@
         Cancel
       </v-btn>
     </v-stepper-content>
-
     <v-stepper-step
       editable
       :complete="e1 > 3"
       step="3">
       Road Surface
     </v-stepper-step>
-
     <v-stepper-content step="3">
-        <v-card>
-          <v-col v-for="(item,index) in assetLnInfo" :key="index">
+      
+        <v-card  v-if='graphic===true'>
+          <div class="scroller"> 
+          <v-col v-for="(item,index) in rdbdSurf" :key="index">
           <v-select :items="surface" label="Road Surface" outlined v-model="item.srfc_type_id"></v-select> <!-- //v-model="roadbedSurface" -->
           <v-row>
                <v-col sm="6">
@@ -65,7 +65,7 @@
                  <v-text-field label='B' v-model="item.asset_ln_end_dfo_ms"></v-text-field>
                </v-col>
           </v-row>
-          <v-btn id="currentSurf"><img src="..\assets\outline_delete_black_24dp.png" @click="deleteSurface()"></v-btn>
+          <v-btn id="currentSurf"><img src="..\assets\outline_delete_black_24dp.png" @click="testFunc()"></v-btn>
           </v-col>
         <v-card v-for="item in roadSurface" :key="item">
             <v-select :items="surface" label="Road Surface" outlined ></v-select>
@@ -80,7 +80,36 @@
             <v-btn id="addSurf"><img src="..\assets\outline_delete_black_24dp.png" @click="deleteSurface()"></v-btn>
             <!-- <v-btn @click="deleteSurface()">Delete</v-btn> -->
         </v-card>
+        </div>
         <v-btn color="pink" @click="addRoadSurface()">add additional Road Surface Types</v-btn>
+        </v-card>
+        <v-card  v-if='graphic===false' v-scroll.self="onScroll" class="overflow-y-auto">
+          <v-col v-for="(item,index) in fRdbdSurf" :key="index">
+            <v-select :items="surface" label="Road Surface" outlined v-model="item.srfc_type_id" disabled></v-select> 
+              <v-row>
+                <v-col sm="6">
+                 <v-text-field label='A' v-model="item.asset_ln_begin_dfo_ms" disabled></v-text-field>
+                </v-col>
+                <v-col sm="6">
+                 <v-text-field label='B' v-model="item.asset_ln_end_dfo_ms" disabled></v-text-field>
+                </v-col>
+              </v-row>
+          <!-- <v-btn id="currentSurf"><img src="..\assets\outline_delete_black_24dp.png" @click="testFunc()"></v-btn> -->
+          </v-col>
+        <!-- <v-card v-for="item in roadSurface" :key="item">
+          <v-select :items="surface" label="Road Surface" outlined ></v-select>
+            <v-row >
+               <v-col>
+                 <v-text-field label='A' ></v-text-field><v-btn id="editbdfo" icon x-small elevation=0><v-icon>mdi-pencil</v-icon></v-btn>
+               </v-col>
+               <v-col sm="6">
+                 <v-text-field label='B'></v-text-field><v-btn id="editedfo" icon x-small elevation=0><v-icon>mdi-pencil</v-icon></v-btn>
+               </v-col>
+            </v-row>
+          <v-btn id="addSurf"><img src="..\assets\outline_delete_black_24dp.png" @click="deleteSurface()"></v-btn>
+            
+        </v-card>
+        <v-btn color="pink" @click="addRoadSurface()">add additional Road Surface Types</v-btn> -->
         </v-card>
         <v-btn
             color="primary"
@@ -96,7 +125,7 @@
       Number of Lanes
     </v-stepper-step>
     <v-stepper-content step="4">
-      <v-card><v-select v-model="numLane" :items="lanes" label="Number of Lanes" outlined filled></v-select>
+      <v-card :disabled="graphic ? disabled : ''"><v-select v-model="numLane" :items="lanes" label="Number of Lanes" outlined filled></v-select>
       </v-card>
       <v-btn
         color="primary"
@@ -120,17 +149,23 @@
         Cancel
       </v-btn>
     </v-stepper-content>
+    <!-- <Map @nm="bool"/> -->
   </v-stepper>
 </template>
 
 <script>
-import { criConstants } from '../common/cri_constants';
-import {modifyRoadbed, getGraphic} from '../components/Map/editFunc'
+//import { criConstants } from '../common/cri_constants';
+import { getGraphic, getFeature} from '../components/Map/editFunc'
 import {roadInfo} from '../store'
+//import Map from '../components/Map/Map.vue'
 
 
 export default {
     name:"stepper",
+    props:{
+      received:Boolean
+    },
+    //components: {Map},
     data () {
       return {
         e1: 1,
@@ -139,7 +174,7 @@ export default {
         lanes:[1,2,3,4,5,6],
         counter:0,
         roadSurface:[],
-        roadbedName: '',
+        roadbedName: null,
         roadbedDesign:'',
         roadbedSurface:'',
         beginDFO:null,
@@ -147,116 +182,117 @@ export default {
         numLane:null,
         editTest: false,
         clickCount: 0,
+        graphic: false,
+        feature: false,
+        clickCountF:0,
         cursor: false,
         bdfo: false,
         edfo: true,
-        assetLnInfo:[]
+        assetLnInfo: null,
+        scrollInvoked:0,
+        disabled: false
+        //bool: ''
       }
     },
     mounted(){
       document.getElementById('addBtn').onclick = this.clearTable
-      console.log(roadInfo.getaddRoad)
     },
     watch:{
-
-      roadbedName:{ //roadbedName
-        handler: async function(){
-          await modifyRoadbed(false)
-          console.log(roadInfo.roadbedName)
-          console.log(roadInfo.getSurface)
-          console.log(roadInfo.getDesign)
-          //let design = criConstants.design
-          //let surface = criConstants.surface
-          //??Maybe set as a getter/setter
-          // let getAssetInfo = roadInfo.getSurface
-          // console.log(this.assetLnInfo.length)
-          // this.assetLnInfo.length = 0
-          // for(let x in getAssetInfo){
-          //   console.log(getAssetInfo[x])
-          //   this.assetLnInfo.push(getAssetInfo[x])
-          // }
-          this.assetLnInfo = roadInfo.getSurface
-          this.roadbedName = roadInfo.getName
-          this.roadbedDesign = roadInfo.getDesign
-          this.numLane = roadInfo.getLane
-          // for(let i in design){
-          //   if(design[i]['num'] === modify.features[0].attributes['design']){
-          //     this.roadbedDesign = design[i]['name']
-          //   }
-          // }
-          // for(let i in surface){
-          //   if(surface[i]['num'] === modify.features[0].attributes['surface']){
-          //     this.roadbedSurface = surface[i]['name']
-          //     }
-          // }
-          
-          //this.beginDFO = modify.features[0].attributes['begin_dfo']
-          //this.endDFO = modify.features[0].attributes['end_dfo']
-        },
-        immediate: true,
+      //prop transfer data test
+      received(){
+        console.log(this.received)
       },
       clickCount:{
         handler: async function(){
-          let count = await getGraphic();
-          console.log(roadInfo.getName)
-          let design = criConstants.design
-          let surface = criConstants.surface
+          let countG = await getGraphic()
+          this.feature = false;
+          this.graphic = true;
+
+          this.clickCount += countG
           this.roadbedName = roadInfo.getName
-          for(let i in design){
-            if(design[i]['num'] === roadInfo.getDesign){
-              this.roadbedDesign = design[i]['name']
-            }
-          }
-          for(let i in surface){
-            if(surface[i]['num'] === roadInfo.getSurface){
-              this.roadbedSurface = surface[i]['name']
-            }
-          }
+          this.roadbedDesign = roadInfo.getDesign
           this.numLane = roadInfo.getLane
-          this.beginDFO = roadInfo.getbeginDfo
-          this.endDFO = roadInfo.getendDfo
-          this.clickCount += count
           document.getElementById("step").style.width='450px'
         }, 
-        immediate: true,
+         immediate: true,
+      },
+      clickCountF:{
+        handler: async function(){
+          let countF = await getFeature()
+          this.feature = true;
+          this.graphic = false;
+          this.clickCountF += countF
+          this.roadbedName = roadInfo.getName
+          this.roadbedDesign = roadInfo.getDesign
+          this.numLane = roadInfo.getLane
+          document.getElementById("step").style.width='450px'
+         
+        }, 
+         immediate: true,
       },
     },
 
     methods:{
-        cancel(){
-            document.getElementById("step").style.width = '0px'
-        },
+      onScroll() {
+        this.scrollInvoked++
+      },
+      cancel(){
+        document.getElementById("step").style.width = '0px'
+        console.log(this.getCount)
+      },
         addRoadSurface(){
-             let count= this.counter++
-             this.roadSurface.push(count)
-            //  if(this.endDFO != null){
-            //    this.endDFO = this.endDFO/count
-            //  }
-             
+            let count= this.counter++
+            this.roadSurface.push(count)
         },
         clearTable(){
           this.roadbedName = undefined
           this.roadbedDesign = undefined
           this.roadbedSurface = undefined
           this.numLane = undefined
-          this.beginDFO = undefined
-          this.endDFO = undefined
         },
         deleteSurface(index){
-          if(document.getElementById('currentSurf')){
-            this.assetLnInfo.splice(index,1)
-          }
-          else if(document.getElementById('addSurf')){
+          // if(document.getElementById('currentSurf')){
+          //   console.log(this.rdbdSurf)
+          //   this.assetLnInfo.splice(index,1)
+          // }
+          if(document.getElementById('addSurf')){
             this.roadSurface.splice(index, 1)
           }
         },
     },
+    computed:{
+      rdbdSurf(){
+        this.clickCount;
+        let srfc = roadInfo.getSurface
+        console.log(srfc)
+        return srfc
+      },
+      fRdbdSurf(){
+        this.clickCountF;
+        let Fsrfc = roadInfo.getSurface
+        console.log(Fsrfc)
+        return Fsrfc
+      },
+      getCount:{
+        get(){
+          return roadInfo.getCount
+        }
+      }
+      // testFunc(){
+      //   this.assetLnInfo = this.rdbdSurf
+
+      //   return 1
+      // }
+    }
 }
 </script>
 <style scoped>
-#editbdfo,#editedfo {
-  top: -50px;
-  left: 60px;
+.scroller {
+  width: auto;
+  height: 300px;
+  overflow-y: scroll;
+  scrollbar-color: grey;
+  scrollbar-width: thin;
 }
 
 </style>

@@ -1,16 +1,21 @@
 <template>
-
     <div id="viewDiv" class="main">
+        
         <div class="banner">
             <v-toolbar dark>
             <v-app-bar-nav-icon @click="expand"></v-app-bar-nav-icon>
             <v-toolbar-title justify="center">Welcome to DUSA</v-toolbar-title>
-                    <v-btn color="primary" small @click="addRoad(); snackbar = true" id="addBtn">Add Roads</v-btn>
-                    <v-btn color="green" small id="Recertify">Recertify</v-btn>
-                    <v-btn style="left: auto" icon><v-icon>mdi-export</v-icon></v-btn>
+            <v-btn-toggle id="delBtn">
+                <v-btn color="red" small>Delete Roads</v-btn>
+                <v-btn color="primary" small @click="addRoad(); snackbar = true" id="addBtn">Add Roads</v-btn>
+                <input id="upldFile" type="file" hidden @change="fileValid()"><v-btn @click="uploadFile()" color="blue-grey" small component="span" variant="contained">Upload Files</v-btn>
+            </v-btn-toggle>
+            <v-btn-toggle id="Recertify">
+                <v-btn color="green" small @click="submitCertify=true">Submit & Certify</v-btn>
+                <v-btn color="Black" small>Save & Exit</v-btn>
+            </v-btn-toggle>
             </v-toolbar>
         </div>
-        
             <div class="text-center">
                 <v-snackbar style="bottom:50px;" v-model = snackbar timeout=-1>
                     <v-btn dark color="pink" text @click="snackbar = false; cancelEditing()" width=600> Stop Editing </v-btn>
@@ -27,10 +32,29 @@
                 <v-btn elevation=0 style="bottom:65px; right: 43%">About</v-btn>
                 </v-card>
             </div>
-                
-            
-        <div id="step"><stepper/></div>
-        <!-- <mapFooter/> -->
+        <div id="step"><stepper :received="editTest"/></div>
+       <v-dialog
+        v-model="submitCertify"
+        max-width="500">
+            <v-card v-model="submitCertify" height="300">
+            <v-img><img style="position:relative; top:0%;" src="@/assets/favicon-32x32.png"></v-img>
+            <v-card-actions>
+            <div style="position:absolute; top:20%; left: 5%" class="black--text mb-3">
+            <v-card-text >
+                 You are about to submit and certify county mileage for {{county}} County.<br>
+                 The previous years mileage was <b>{{this.countyTotal}} miles</b>.<br>The new total mileage is <b>{{countyTots}} miles.</b>
+            </v-card-text>
+            </div>
+            <div style="position:absolute; left: 10%; bottom: 5%; width=100%">
+            <div style="position:relative; left:70%; top:0%">
+                <v-btn elevation="2" color="primary">
+                Submit & Certify
+              </v-btn>
+            </div>
+          </div>
+        </v-card-actions>
+      </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -48,6 +72,7 @@ export default {
     components: {stepper},
     data(){
         return{
+            submitCertify:false,
             snackbar: false,
             stepper: false,
             addButton: "add Road",
@@ -59,7 +84,7 @@ export default {
             newMiles: '',
             modifyLine: 0,
             modifyLength: 0,
-            editTest: false
+            editTest: false,
         }
     },
     async mounted() {
@@ -74,12 +99,16 @@ export default {
         addRoad() {
             addRoadbed().then(result=>{
             this.previousTotal += parseFloat(result.toFixed(3))
-            this.editTest = true
+    
+            //this.editTest = false
+            console.log(this.editTest)
             })
         },
         cancelEditing(){
             stopEditing();
-            this.editTest = false
+            //this.editTest = true
+            console.log(this.editTest)
+            
         },
         expand(){
             if (document.getElementById("step").style.width==='0px'){
@@ -88,18 +117,23 @@ export default {
             else{
                 document.getElementById("step").style.width='0px'
             }
-            
-            
+        },
+        uploadFile(){
+            document.getElementById("upldFile").click()
+        },
+        fileValid(){
+            let fileInput = document.getElementById('upldFile').value
+            let allowedExtens = /(\.shp|\.gdb)$/i;
+            if(!allowedExtens.exec(fileInput)){
+                alert("Incorrect File Type!")
+                fileInput = '';
+                return false
+            }
         }
         
     },
     
     watch:{
-        editTest:{
-            handler: async function(){
-                roadInfo.getaddRoad = this.editTest
-            }
-        },
        previousTotal() {
             addRoadbed().then(result=>
             this.previousTotal += parseFloat(result.toFixed(3)))
@@ -110,37 +144,43 @@ export default {
         modifyLine:{
              handler: async function(){
                 let modify = await modifyRoadbed(true)
-                
+                this.editTest = true
                 this.modifyLine += parseFloat(geometryEngine.geodesicLength(modify.features[0].geometry, "miles").toFixed(3))
                 console.log(modify.features[0].geometry)
                 
             },
             immediate:true,
         },
-        
        modifyLength:{
-            handler: function(){
-                updateLength().then(result =>{
-                    console.log(result)
-                    this.modifyLength += parseFloat(result.toFixed(3))
-                }) 
+            handler: async function(){
+                let crow = await updateLength()
+                console.log(crow)
+                this.modifyLength += crow
+               
             },
             immediate: true, 
-        },
+        }
     },
 
     computed:{
         countyTots: function(){
-            return Number(this.countyTotal) + Number(this.previousTotal) + Number(this.modifyLength) + Number(this.modifyLine)
+            return Number(this.countyTotal) + Number(this.previousTotal) + Number(this.modifyLength)
         },
 
         currentMiles: function(){
-            return this.previousTotal + this.modifyLength + this.modifyLine
+            return Number(this.previousTotal) + Number(this.modifyLength)
         },
+        getCount:{
+            get(){
+                return roadInfo.getCount
+            },   
+            set(x){
+                this.$set(roadInfo,'getCount',x)
+            }
+        },
+        
 
-        setaddRoad: function(){
-            return roadInfo.getaddRoad = this.editTest
-        }
+
     }
 
 };
@@ -180,19 +220,20 @@ export default {
     transition: 0.5s;
     z-index: 1
 }
-#addBtn{
+
+#delBtn{
     position: absolute;
     width: auto;
-    height: 30%;
-    top: 40px;
-    right: 130px; 
+    height: auto;
+    top: 30px;
+    right: 45%; 
 }
 #Recertify{
     position: absolute;
     width: auto;
-    height: 30%;
-    top: 40px;
-    right: 250px; 
+    height: auto;
+    top: 30px;
+    right: 5%; 
 }
 .banner{
     position: absolute;

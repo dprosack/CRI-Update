@@ -1,15 +1,17 @@
 export const roadInfo = {
     roadbedName:'test',
     roadbedDesign:'',
-    roadbedSurface:{},
+    roadbedSurface: null,
     numLane:0,
-    beginDfo: 0,
-    endDfo: 0,
     addRoad: false,
     cntyName:'',
     cntyNmbr: 0,
     cntyMiles:0,
+    count:false,
 
+    get getCount(){
+       return this.count
+    },
     get getcntyNmbr(){
        return this.cntyNmbr
     },
@@ -34,13 +36,10 @@ export const roadInfo = {
     get getLane(){
        return this.numLane
     },
-    get getbeginDfo(){
-      return this.beginDfo
-   },
-   get getendDfo(){
-      return this.endDfo
-   },
 
+   set getCount(cnt){
+      this.count = cnt
+   },
    set getcntyNmbr(nbr){
       this.cntyNmbr = nbr
    },
@@ -64,12 +63,6 @@ export const roadInfo = {
     },
     set getLane(lane){
        this.numLane = lane
-    },
-    set getbeginDfo(begin){
-      this.beginDfo = begin
-    },
-    set getendDfo(end){
-      this.endDfo = end
     },
   }
 

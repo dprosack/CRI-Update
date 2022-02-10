@@ -12,6 +12,8 @@ import * as watchUtils from "@arcgis/core/core/watchUtils";
 //import SnappingOptions from "@arcgis/core/views/interactive/snapping/SnappingOptions";
 
 export const gLayer = new GraphicsLayer();
+export const delgLayer = new GraphicsLayer();
+
 export const map = new Map({
     basemap: criConstants.basemap,
     layers: [gLayer]
@@ -24,9 +26,12 @@ export const view = new MapView({
     highlightOptions: {
         color: "orange"
     },
-});
+    constraints: {
+        rotationEnabled: false,
+        snapToZoom: false
 
-view.ui.remove("zoom")
+      }
+});
 
 export const featLayer = new FeatureLayer({
     url: criConstants.refernceLayer,
@@ -37,6 +42,13 @@ export const featLayer = new FeatureLayer({
     returnZ: true,
     hasM: true,
     visible: false,
+    renderer:{
+        type: "simple",
+        symbol:{
+            type: "simple-line",
+            color:[0,127,255]
+        }
+    }
   });
 
 export const rdbdSrfcAsst = new FeatureLayer({
@@ -70,26 +82,27 @@ export const sketch = new Sketch({
         layer: gLayer,
         polylineSymbol: {
           type: "simple-line",
-          color: [204, 0, 0],
+          color: [127, 255, 212	],
           width: 2,
           style: "dash"
         }
-    }),
+    })
     // SnappingOptions: new SnappingOptions({
     //     enabled: true,
     //     featureSources: [featLayer]
     // })
 });
 
-
-
-
   //add portal service to map
-  watchUtils.whenOnce(view,"ready").then(
+watchUtils.whenOnce(view,"ready").then(
     map.addMany([featLayer,txCounties])
-  );
-  
+);
+function stopEvtPropagation(event) {
+    event.stopPropagation();
+}
 
+view.on('double-click', stopEvtPropagation)
+view.ui.remove("zoom")  
 
 
 /**
@@ -100,6 +113,7 @@ export const initialize = (container) => {
     view.container = container;
     view.when()
         .then(() => {
+
             console.log('Map and View are ready');
         })
         .catch(error => {
