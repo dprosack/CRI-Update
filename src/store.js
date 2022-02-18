@@ -1,5 +1,6 @@
 export const roadInfo = {
-    roadbedName:'test',
+    objectid: 0,
+    roadbedName:'',
     roadbedDesign:'',
     roadbedSurface: null,
     numLane:0,
@@ -9,6 +10,9 @@ export const roadInfo = {
     cntyMiles:0,
     count:false,
 
+    get getObjectId(){
+       return this.objectid
+    },
     get getCount(){
        return this.count
     },
@@ -37,6 +41,9 @@ export const roadInfo = {
        return this.numLane
     },
 
+   set getObjectId(id){
+      this.objectid = id
+   },
    set getCount(cnt){
       this.count = cnt
    },

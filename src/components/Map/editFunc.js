@@ -1,19 +1,71 @@
 //import const from map.js
-import {sketch, view, featLayer, gLayer, countyOfficialInfo, map, rdbdSrfcAsst, rdbdDsgnAsst, rdbdNameAsst, rdbdLaneAsst} from '../Map/map'
+import {sketch, view, featLayer, gLayer, countyOfficialInfo, map, rdbdSrfcAsst, rdbdDsgnAsst, rdbdNameAsst, rdbdLaneAsst, editsLayer,rdbdSrfcGeom} from '../Map/map'
 import {cntyNbrNm} from '../../common/txCnt'
 import {roadInfo} from '../../store'
 //esri js geometry engine import
 import * as geometryEngine from "@arcgis/core/geometry/geometryEngine";
 import Graphic from "@arcgis/core/Graphic";
 import Query from "@arcgis/core/rest/support/Query";
+import OAuthInfo from "@arcgis/core/identity/OAuthInfo";
+import esriId from "@arcgis/core/identity/IdentityManager";
 import { criConstants } from '../../common/cri_constants';
 
-
 //add login info
-// export function loginAGOL(){
+export function login(){
+  let auth = new OAuthInfo({
+    appId:"Chsd9GwkzlckpRBr",
+    expiration: 10080,
+    popup: false,
+    portalUrl: "https://txdot.maps.arcgis.com",
+  })
+  console.log(esriId.findfindOAuthInfo(auth.portalUrl))
+  esriId.registerOAuthInfos([auth]);
+  const id = esriId.getCredential(auth.portalUrl + "/sharing");
+  console.log(id)
+}
+function queryFeat(qry){
+  let queryFeat = featLayer.queryFeatures({
+    objectIds: [qry.results[0].graphic.attributes.objectid],
+    outFields: ["*"],
+    returnGeometry: true,
+    returnM: true
+  })
+  return queryFeat
+}
 
-// }
-
+async function queryFeatureTables(tblqry){
+  const query = new Query();
+  query.where = `RDBD_GMTRY_LN_ID = ${tblqry.features[0].attributes.gid}`
+  query.outFields = [ "*" ]
+  const rdbdSrfc = rdbdSrfcAsst.queryFeatures(query)
+  const rdbdDsgn = rdbdDsgnAsst.queryFeatures(query)
+  const rdbdName = rdbdNameAsst.queryFeatures(query)
+  const rdbdLane = rdbdLaneAsst.queryFeatures(query)
+  const rdbdSrfcAtt = await rdbdSrfc
+  const rdbdDsgnAtt = await rdbdDsgn
+  const rdbdNameAtt = await rdbdName
+  const rdbdLaneAtt = await rdbdLane
+  console.log(rdbdSrfcAtt)
+  let rdbdSrfArry = [];
+  if(rdbdSrfArry.length){
+    rdbdSrfArry.length = 0
+  }
+  for(let srf in rdbdSrfcAtt.features){
+    let surface = criConstants.surface
+    for(let i in surface){
+      if(surface[i]['num'] === rdbdSrfcAtt.features[srf].attributes.srfc_type_id){
+        rdbdSrfcAtt.features[srf].attributes.srfc_type_id = surface[i]['name']
+      }
+    }
+    rdbdSrfArry.push(rdbdSrfcAtt.features[srf].attributes)
+  }
+  console.log(rdbdSrfArry)
+  rdbdSrfArry.sort((a,b)=>(a.asset_ln_begin_dfo_ms > b.asset_ln_begin_dfo_ms)? 1:-1)
+  roadInfo.getSurface = rdbdSrfArry
+  roadInfo.getDesign = rdbdDsgnAtt.features[0].attributes.rdway_dsgn_type_dscr
+  roadInfo.getName = rdbdNameAtt.features[0].attributes.st_defn_nm
+  roadInfo.getLane = rdbdLaneAtt.features[0].attributes.nbr_thru_lane_cnt
+}
 //get county name and road totals
 export async function countyInfo(){
   let countyInfoPromise =  new Promise(function(res){
@@ -60,20 +112,15 @@ export async function addRoadbed(){
     }) 
 }
 
-export async function modifyRoadbed(bool){
+export async function modifyRoadbed(clickType){
   let promise = new Promise(function(res){
-    view.on("double-click", (event) => {
+    view.on(clickType, (event) => {
       let opts = { include: featLayer }
       view.hitTest(event, opts).then(function(response){
         for(let i=0; i < response.results.length; i++){
           if(response.results[i].graphic.geometry !== null && response.results[i].graphic.sourceLayer !== null){
-            let queryFeat = featLayer.queryFeatures({
-              objectIds: [response.results[0].graphic.attributes.objectid],
-              outFields: ["*"],
-              returnGeometry: true,
-              returnM: true
-            })
-            queryFeat.then(result => res(result))
+            let test = queryFeat(response)
+            test.then(result=>res(result))
           }
         }
       })
@@ -81,39 +128,13 @@ export async function modifyRoadbed(bool){
   })
 
   let feature = await promise;
+  console.log(feature)
   //rdbdSrfc.then(result => console.log(result))
-  const query = new Query();
-  query.where = `RDBD_GMTRY_LN_ID = ${feature.features[0].attributes.gid}`
-  query.outFields = [ "*" ]
-  const rdbdSrfc = rdbdSrfcAsst.queryFeatures(query)
-  const rdbdDsgn = rdbdDsgnAsst.queryFeatures(query)
-  const rdbdName = rdbdNameAsst.queryFeatures(query)
-  const rdbdLane = rdbdLaneAsst.queryFeatures(query)
-  const rdbdSrfcAtt = await rdbdSrfc
-  const rdbdDsgnAtt = await rdbdDsgn
-  const rdbdNameAtt = await rdbdName
-  const rdbdLaneAtt = await rdbdLane
-  console.log(rdbdSrfcAtt)
-  let rdbdSrfArry = [];
-  if(rdbdSrfArry.length){
-    rdbdSrfArry.length = 0
+  await queryFeatureTables(feature)
+  defineGraphic(feature,clickType)
+  if(clickType === "immediate-click"){
+    return 1
   }
-  for(let srf in rdbdSrfcAtt.features){
-    let surface = criConstants.surface
-    for(let i in surface){
-      if(surface[i]['num'] === rdbdSrfcAtt.features[srf].attributes.srfc_type_id){
-        rdbdSrfcAtt.features[srf].attributes.srfc_type_id = surface[i]['name']
-      }
-    }
-    rdbdSrfArry.push(rdbdSrfcAtt.features[srf].attributes)
-  }
-  console.log(rdbdSrfArry)
-  rdbdSrfArry.sort((a,b)=>(a.asset_ln_begin_dfo_ms > b.asset_ln_begin_dfo_ms)? 1:-1)
-  roadInfo.getSurface = rdbdSrfArry
-  roadInfo.getDesign = rdbdDsgnAtt.features[0].attributes.rdway_dsgn_type_dscr
-  roadInfo.getName = rdbdNameAtt.features[0].attributes.st_defn_nm
-  roadInfo.getLane = rdbdLaneAtt.features[0].attributes.nbr_thru_lane_cnt
-  defineGraphic(feature,bool)
   return feature//geometryEngine.geodesicLength(feature.features[0].geometry, "miles")
 }
 
@@ -147,8 +168,8 @@ export function hightlightFeat(){
   })
 }
 
-function defineGraphic(graphics, dups){
-  if (dups === true){
+function defineGraphic(graphics, clickType){
+  if (clickType === "double-click"){
     let newGraphic = new Graphic({
     geometry: {
       type: "polyline",
@@ -160,11 +181,14 @@ function defineGraphic(graphics, dups){
     },
 
     attributes: {
+      gid: graphics.features[0].attributes.gid,
       objectid: graphics.features[0].attributes.objectid,
       roadbedName: roadInfo.getName,
       roadbedDesign: roadInfo.getDesign,
       roadbedSurface: roadInfo.getSurface,
       numLane: roadInfo.getLane,
+      createDt: new Date().getTime(),
+      createNm: "DPROSACK"
     },
               
     symbol: {
@@ -179,9 +203,10 @@ function defineGraphic(graphics, dups){
   console.log(gLayer)
   for(let id in gLayer.graphics.items)
     if(gLayer.graphics.items[id].attributes !== null){
-      objectidList.push(gLayer.graphics.items[id].attributes.objectid)
+      objectidList.push(gLayer.graphics.items[id].attributes.gid)
     }
-    featLayer.definitionExpression = `OBJECTID not in (${objectidList}) and cnty_nm = '${roadInfo.getcntyName}'`
+    featLayer.definitionExpression = `gid not in (${objectidList}) and cnty_nm = '${roadInfo.getcntyName}'`
+    rdbdSrfcGeom.definitionExpression = `gid not in (${objectidList}) and cnty_nm = '${roadInfo.getcntyName}'`
   }
 }
 
@@ -255,6 +280,7 @@ export async function getGraphic(){
             view.hitTest(event,option)
             .then(function(response){
               if(response.results.length){
+                roadInfo.getObjectId = response.results[0].graphic.attributes !== null ? response.results[0].graphic.attributes['objectid'] : null
                 roadInfo.getName = response.results[0].graphic.attributes !== null ? response.results[0].graphic.attributes['roadbedName'] : null
                 roadInfo.roadbedSurface = response.results[0].graphic.attributes !== null ? response.results[0].graphic.attributes['roadbedSurface'] : null
                 roadInfo.getDesign = response.results[0].graphic.attributes !== null ? response.results[0].graphic.attributes['roadbedDesign'] : null
@@ -270,65 +296,403 @@ export async function getGraphic(){
  return returnGetGraph
 }
 
-export async function getFeature(){
-  let getGraphPromise = new Promise(function(resp){
-      view.on("immediate-click", function(event){
-        let option = {include: featLayer}
-      
-          view.when(function(){
-            view.hitTest(event,option)
-            .then(function(response){
-              if(response.results.length){
-                let queryFeat = featLayer.queryFeatures({
-                  objectIds: [response.results[0].graphic.attributes.objectid],
-                  outFields: ["*"],
-                  returnGeometry: true,
-                  returnM: true
-                })
-                queryFeat.then(result => resp(result))
-              }
-            })
-          })
-      });
-  });
-  //create one function for query tables
- let returnGetGraph = await getGraphPromise;
- const query = new Query();
-  query.where = `RDBD_GMTRY_LN_ID = ${returnGetGraph.features[0].attributes.gid}`
-  query.outFields = [ "*" ]
-  const rdbdSrfc = rdbdSrfcAsst.queryFeatures(query)
-  const rdbdDsgn = rdbdDsgnAsst.queryFeatures(query)
-  const rdbdName = rdbdNameAsst.queryFeatures(query)
-  const rdbdLane = rdbdLaneAsst.queryFeatures(query)
-  const rdbdSrfcAtt = await rdbdSrfc
-  const rdbdDsgnAtt = await rdbdDsgn
-  const rdbdNameAtt = await rdbdName
-  const rdbdLaneAtt = await rdbdLane
-  console.log(rdbdSrfcAtt)
-  let rdbdSrfArry = [];
-  if(rdbdSrfArry.length){
-    rdbdSrfArry.length = 0
-  }
-  for(let srf in rdbdSrfcAtt.features){
-    console.log(rdbdSrfcAtt.features[srf])
-    let surface = criConstants.surface
-    for(let i in surface){
-      if(surface[i]['num'] === rdbdSrfcAtt.features[srf].attributes.srfc_type_id){
-        rdbdSrfcAtt.features[srf].attributes.srfc_type_id = surface[i]['name']
-      }
+// function reapplyM(arr){
+//   let testArr = []
+//   while(arr.length){
+//     let split1 = arr.splice(0,2)
+//     testArr.push(split1)
+//   }
+//   console.log(testArr)
+//   for (let i=0; i < testArr.length; i++){
+//     console.log(testArr[i])
+//     //x2-x1
+//     let xDiff = Math.pow(Math.abs(testArr[i][1][0] - testArr[i][0][0]), 2)
+//     // console.log(xDiff)
+//     //y2-y1
+//     let yDiff = Math.pow(Math.abs(testArr[i][1][1] - testArr[i][0][1]), 2)
+//     // console.log(yDiff)
+//     const m = Math.sqrt(xDiff + yDiff) * 0.0006213712
+//     console.log(m)
+//     testArr[i][1].slice(3,0,m)
+//   }
+//   return testArr
+//}
+
+export function saveInfo(id){
+  console.log(id)
+  // let geom = gLayer.graphics.items[0].geometry.paths[0]
+  // console.log(geom)
+  // let copyGeom = [...geom]
+  // console.log(reapplyM(copyGeom))
+  const graphic = gLayer.graphics.items
+  console.log(graphic)
+  let geomPath;
+  let createdate;
+  let createName;
+  let gid;
+  for(let x in graphic){
+    console.log(graphic[x].attributes)
+    if(graphic[x].attributes.objectid === id.objectid){
+      console.log(`${graphic[x].attributes.objectid} === ${id.objectid}`)
+      console.log(graphic[x].attributes)
+      console.log(graphic[x].geometry)
+      geomPath = graphic[x].geometry
+      createdate = graphic[x].attributes.createDt
+      createName = graphic[x].attributes.createNm
+      gid = graphic[x].attributes.gid
     }
-    console.log(rdbdSrfcAtt.features[srf].attributes)
-    rdbdSrfArry.push(rdbdSrfcAtt.features[srf].attributes)
   }
-  console.log(rdbdSrfArry)
-  rdbdSrfArry.sort((a,b)=>(a.asset_ln_begin_dfo_ms > b.asset_ln_begin_dfo_ms)? 1:-1)
-  roadInfo.getSurface = rdbdSrfArry
-  roadInfo.getDesign = rdbdDsgnAtt.features[0].attributes.rdway_dsgn_type_dscr
-  roadInfo.getName = rdbdNameAtt.features[0].attributes.st_defn_nm
-  roadInfo.getLane = rdbdLaneAtt.features[0].attributes.nbr_thru_lane_cnt
-  console.log(rdbdSrfcAtt.features[0].attributes)
- return 1
+  console.log(JSON.stringify(id.rdbdSurf))
+  const editGraphic = new Graphic({
+    geometry: geomPath,
+    attributes: {
+      objectid: id.objectid,
+      gid: gid,
+      begin_dfo: 1,
+      end_dfo: 1,
+      seg_len:4,
+      county: roadInfo.getcntyNmbr,
+      edit_type:'update',
+      create_nm: createName,
+      create_dt: createdate,
+      edit_nm: id.editNm,
+      edit_dt: id.editDt,
+      submit: 0,
+      cnty_nbr: roadInfo.getcntyNmbr,
+      srfc_type_id:id.rdbdSurfe,
+      st_defn_nm: id.rdbdName,
+      rdway_dsgn_type_dscr: id.rdbdDes,
+      nbr_thru_lane_cnt: id.numLanes,
+    }
+  });
+  console.log(editGraphic)
+  editsLayer.applyEdits({
+    addFeatures: [editGraphic]
+  });
 }
+
+// export function getCoordsRange(y){
+//   console.log(y)
+//   for(let id in gLayer.graphics.items){
+//     for(let fo in rdbdAsset.graphics.items)
+//     if(gLayer.graphics.items[id].attributes.objectid === rdbdAsset.graphics.items[fo].attributes.objectid){
+//       rdbdAsset.removeMany(rdbdAsset.graphics)
+//     }
+//   }
+//   //let x = gLayer.graphics.items[0].geometry.paths[0]
+//   let dens;
+//   for(let id in gLayer.graphics.items){
+//     if(gLayer.graphics.items[id].attributes.objectid === y[0].objectid){
+//       dens = geometryEngine.densify(gLayer.graphics.items[id].geometry,.1)
+//     }
+//   }
+//   console.log(dens)
+//   let densUpdate = dens.paths[0]
+  
+//   let mArr = [];
+//   if(mArr.length){
+//     mArr.length = 0
+//   }
+
+//   for(let i = 0; i < densUpdate.length; i++){
+//     //console.log(x[i][2])
+//     mArr.push(densUpdate[i][2]) //mval
+//   }
+//   for(let d in y){
+//     console.log(y[d].srfcType)
+//     if(y[d].srfcType === 'Paved'){
+//       let getstart = (element) => element >= y[d].AssetBeginDfo;
+//       let endstart = (element) => element >= y[d].AssetEndDfo;
+//       console.log(mArr.findIndex(getstart))
+//       console.log(mArr.findIndex(endstart))
+//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
+//       console.log(geom)
+//       let pavement = new Graphic({
+//         geometry: {
+//           type: "polyline",
+//           paths: geom,
+//           hasM: true,
+//           spatialReference: {
+//             wkid: 3857
+//           }
+//         },
+    
+//         attributes: {
+//           objectid: gLayer.graphics.items[0].attributes.objectid,
+//         },
+                  
+//         symbol: {
+//           type: "simple-line",
+//           color: '#8DB600',
+//           width: 10,
+//           style: "solid"
+//         }
+//       })
+//       rdbdAsset.graphics.add(pavement);
+//     }
+//     else if(y[d].srfcType === 'Gravel'){
+//       let getstart = (element) => element >= y[d].AssetBeginDfo;
+//       let endstart = (element) => element >= y[d].AssetEndDfo;
+//       console.log(mArr.findIndex(getstart))
+//       console.log(mArr.findIndex(endstart))
+//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
+//       console.log(geom)
+//       let gravel = new Graphic({
+//         geometry: {
+//           type: "polyline",
+//           paths: geom,
+//           hasM: true,
+//           spatialReference: {
+//             wkid: 3857
+//           }
+//         },
+    
+//         attributes: {
+//           objectid: gLayer.graphics.items[0].attributes.objectid,
+//         },
+                  
+//         symbol: {
+//           type: "simple-line",
+//           color: '#4B5320',
+//           width: 10,
+//           style: "solid"
+//         }
+//       })
+//       rdbdAsset.graphics.add(gravel);
+//     }
+//     else if(y[d].srfcType === 'Dirt/Natural'){
+//       let getstart = (element) => element >= y[d].AssetBeginDfo;
+//       let endstart = (element) => element >= y[d].AssetEndDfo;
+//       console.log(mArr.findIndex(getstart))
+//       console.log(mArr.findIndex(endstart))
+//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
+//       console.log(geom)
+//       let dirtNatural = new Graphic({
+//         geometry: {
+//           type: "polyline",
+//           paths: geom,
+//           hasM: true,
+//           spatialReference: {
+//             wkid: 3857
+//           }
+//         },
+    
+//         attributes: {
+//           objectid: gLayer.graphics.items[0].attributes.objectid,
+//         },
+                  
+//         symbol: {
+//           type: "simple-line",
+//           color: '#FFD12A',
+//           width: 10,
+//           style: "solid"
+//         }
+//       })
+//       rdbdAsset.graphics.add(dirtNatural);
+//     }
+//     else if(y[d].srfcType === 'Concrete'){
+//       let getstart = (element) => element >= y[d].AssetBeginDfo;
+//       let endstart = (element) => element >= y[d].AssetEndDfo;
+//       console.log(mArr.findIndex(getstart))
+//       console.log(mArr.findIndex(endstart))
+//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
+//       console.log(geom)
+//       let concrete = new Graphic({
+//         geometry: {
+//           type: "polyline",
+//           paths: geom,
+//           hasM: true,
+//           spatialReference: {
+//             wkid: 3857
+//           }
+//         },
+    
+//         attributes: {
+//           objectid: gLayer.graphics.items[0].attributes.objectid,
+//         },
+                  
+//         symbol: {
+//           type: "simple-line",
+//           color: '#000000',
+//           width: 10,
+//           style: "solid"
+//         }
+//       })
+//       rdbdAsset.graphics.add(concrete);
+//     }
+//     else if(y[d].srfcType === 'Brick'){
+//       let getstart = (element) => element >= y[d].AssetBeginDfo;
+//       let endstart = (element) => element >= y[d].AssetEndDfo;
+//       console.log(mArr.findIndex(getstart))
+//       console.log(mArr.findIndex(endstart))
+//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
+//       console.log(geom)
+//       let brick = new Graphic({
+//         geometry: {
+//           type: "polyline",
+//           paths: geom,
+//           hasM: true,
+//           spatialReference: {
+//             wkid: 3857
+//           }
+//         },
+    
+//         attributes: {
+//           objectid: gLayer.graphics.items[0].attributes.objectid,
+//         },
+                  
+//         symbol: {
+//           type: "simple-line",
+//           color: '#CC0000',
+//           width: 10,
+//           style: "solid"
+//         }
+//       })
+//       rdbdAsset.graphics.add(brick);
+//     }
+//   }
+  
+  
+// }
+
+export function getCoordsRange(y){
+  console.log(y)
+  let dens;
+  for(let id in gLayer.graphics.items){
+        if(gLayer.graphics.items[id].attributes.objectid === y[0].objectid){
+          dens = gLayer.graphics.items[id].geometry
+        }
+  }
+  let densUpdate = dens.paths[0];
+  let mArr = [];
+  if(mArr.length){
+    mArr.length = 0
+  }
+  for(let i = 0; i < densUpdate.length; i++){
+    //console.log(x[i][2])
+    mArr.push(densUpdate[i][2]) //mval
+  }
+  for(let d in y){
+        console.log(y[d].srfcType)
+        if(y[d].srfcType === 'Paved'){
+          let getstart = (element) => element >= y[d].AssetBeginDfo;
+          let endstart = (element) => element >= y[d].AssetEndDfo;
+          console.log(mArr.findIndex(getstart))
+          console.log(mArr.findIndex(endstart)-1)
+          console.log(mArr.findIndex(endstart))
+          let geom = densUpdate.slice(mArr.findIndex(endstart)-1,mArr.findIndex(endstart)+1)
+          console.log(geom[0][2])
+          const radius = Math.abs(geom[0][2] - y[d].AssetEndDfo)
+          console.log(radius)
+          // const x = geom[0][0][0]
+          // const y = geom[0][0][1]
+          // const point = new Graphic({
+          //   geometry: {
+          //     type: "point", 
+          //     longitude: x,
+          //     latitude: y
+          //   }
+          //})
+          // let ptBuff = geometryEngine.buffer(point, radius, "miles");
+          // console.log(ptBuff)
+          // console.log(geom[0][0][2])
+        }
+  }
+}
+
+// function makeCircle(){
+//   console.log(gLayer.graphics.items[0].geometry)
+//   const circleGeometry = new Circle({
+//     center: [-97.304121,30.053685],
+//     geodesic: true,
+//     numberOfPoints: 100,
+//     radius: .703,
+//     radiusUnit: "miles"
+//   });
+//   console.log(circleGeometry)
+//   let circleLine = new Polyline({
+//       paths: circleGeometry.rings,
+//       spatialReference: {
+//         wkid: 3857
+//       }
+//     })
+//   const geometries = geometryEngine.cut(circleGeometry, gLayer.graphics.items[0].geometry);
+//   console.log(geometries,circleLine)
+//   gLayer.graphics.add(new Graphic({
+//     type: "polyline",
+//     geometry: circleGeometry,
+//     spatialReference: {
+//       wkid: 3857
+//     },
+//     symbol: {
+//       type: "simple-fill",
+//       style: "none",
+//       outline: {
+//         width: 3,
+//         color: "red"
+//       }
+//     }
+//   }));
+// }
+// export async function getFeature(){
+//   let getGraphPromise = new Promise(function(resp){
+//       view.on("immediate-click", function(event){
+//         let option = {include: featLayer}
+      
+//           view.when(function(){
+//             view.hitTest(event,option)
+//             .then(function(response){
+//               if(response.results.length){
+//                 let queryFeat = featLayer.queryFeatures({
+//                   objectIds: [response.results[0].graphic.attributes.objectid],
+//                   outFields: ["*"],
+//                   returnGeometry: true,
+//                   returnM: true
+//                 })
+//                 queryFeat.then(result => resp(result))
+//               }
+//             })
+//           })
+//       });
+//   });
+//   //create one function for query tables
+//  let returnGetGraph = await getGraphPromise;
+//  const query = new Query();
+//   query.where = `RDBD_GMTRY_LN_ID = ${returnGetGraph.features[0].attributes.gid}`
+//   query.outFields = [ "*" ]
+//   const rdbdSrfc = rdbdSrfcAsst.queryFeatures(query)
+//   const rdbdDsgn = rdbdDsgnAsst.queryFeatures(query)
+//   const rdbdName = rdbdNameAsst.queryFeatures(query)
+//   const rdbdLane = rdbdLaneAsst.queryFeatures(query)
+//   const rdbdSrfcAtt = await rdbdSrfc
+//   const rdbdDsgnAtt = await rdbdDsgn
+//   const rdbdNameAtt = await rdbdName
+//   const rdbdLaneAtt = await rdbdLane
+//   console.log(rdbdSrfcAtt)
+//   let rdbdSrfArry = [];
+//   if(rdbdSrfArry.length){
+//     rdbdSrfArry.length = 0
+//   }
+//   for(let srf in rdbdSrfcAtt.features){
+//     console.log(rdbdSrfcAtt.features[srf])
+//     let surface = criConstants.surface
+//     for(let i in surface){
+//       if(surface[i]['num'] === rdbdSrfcAtt.features[srf].attributes.srfc_type_id){
+//         rdbdSrfcAtt.features[srf].attributes.srfc_type_id = surface[i]['name']
+//       }
+//     }
+//     console.log(rdbdSrfcAtt.features[srf].attributes)
+//     rdbdSrfArry.push(rdbdSrfcAtt.features[srf].attributes)
+//   }
+//   console.log(rdbdSrfArry)
+//   rdbdSrfArry.sort((a,b)=>(a.asset_ln_begin_dfo_ms > b.asset_ln_begin_dfo_ms)? 1:-1)
+//   roadInfo.getSurface = rdbdSrfArry
+//   roadInfo.getDesign = rdbdDsgnAtt.features[0].attributes.rdway_dsgn_type_dscr
+//   roadInfo.getName = rdbdNameAtt.features[0].attributes.st_defn_nm
+//   roadInfo.getLane = rdbdLaneAtt.features[0].attributes.nbr_thru_lane_cnt
+//   console.log(rdbdSrfcAtt.features[0].attributes)
+//  return 1
+// }
 
 // export async function HoverAtt(){
 //   view.on('pointer-move', (event) => {

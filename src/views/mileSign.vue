@@ -208,7 +208,7 @@
 
 <script>
 import {countyInfo} from '../components/Map/editFunc'
-import {featLayer,txCounties,view} from '../components/Map/map'
+import {featLayer,txCounties,view,rdbdSrfcGeom} from '../components/Map/map'
 import Query from "@arcgis/core/rest/support/Query"
 import {roadInfo} from '../store'
 //import MileSignConfirmation from '../components/Map/mileageConfirmation.vue'
@@ -323,6 +323,7 @@ export default {
             this.$router.push('/map')
             featLayer.definitionExpression =`cnty_nm = '${this.county}'`
             txCounties.definitionExpression=`CNTY_NM='${this.county}'`
+            rdbdSrfcGeom.definitionExpression=`cnty_nm='${this.county}'`
             const query = new Query();
             query.where = `CNTY_NM = '${this.county}'`
             query.outFields = [ "*" ]
@@ -343,7 +344,6 @@ export default {
           // validate(){
           //   this.$refs.form.validate()
           // }
-
         },
 }
 </script>
