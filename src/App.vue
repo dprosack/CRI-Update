@@ -1,17 +1,23 @@
 <template>
-  
+  <v-app>
     <div id="app">
       <router-view/>
     </div>
+  </v-app>
 </template>
 
 <script>
 import {countyInfo} from './components/Map/editFunc'
+//import Login from './views/Login.vue'
 
 export default {
     name: 'App',
+    //components: {Login},
+    //props: [roadInfo],
     mounted(){
+      //this.$router.push('/login')
       countyInfo().then(result => {result.response === true ? this.$router.push({ name: 'MileSign', params: { id: result.nbr}}) : this.$router.push('/catchAll(.*)')})
+      
     }
 }
 </script>

@@ -7,11 +7,14 @@
 <script>
 import Map from '../components/Map/Map.vue'
 //import {countyInfo} from '../components/Map/editFunc'
-
+import {roadInfo} from '../store'
 export default {
     name: 'MapHome',
     components: {Map
     },
-    props:["id"]
+    props:["id"],
+    mounted(){
+      roadInfo
+    }
 }
 </script>

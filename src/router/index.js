@@ -3,7 +3,7 @@ import VueRouter from 'vue-router'
 import MapHome from '../views/mapHome.vue'
 import errorPage from '../views/errorPage.vue'
 import MileSign from '../views/mileSign.vue'
-
+import Login from '../views/Login.vue'
 Vue.use(VueRouter)
 
 const routes = [
@@ -19,6 +19,12 @@ const routes = [
     component: MapHome,
     props:true
 
+  },
+  {
+    path:'/login',
+    name:'Login',
+    component: Login,
+    props:true
   },
   {
     path: "/catchAll(.*)",
