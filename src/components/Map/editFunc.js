@@ -584,18 +584,18 @@ export function getCoordsRange(y){
           console.log(geom[0][2])
           const radius = Math.abs(geom[0][2] - y[d].AssetEndDfo)
           console.log(radius)
-          // const x = geom[0][0][0]
-          // const y = geom[0][0][1]
-          // const point = new Graphic({
-          //   geometry: {
-          //     type: "point", 
-          //     longitude: x,
-          //     latitude: y
-          //   }
-          //})
-          // let ptBuff = geometryEngine.buffer(point, radius, "miles");
-          // console.log(ptBuff)
-          // console.log(geom[0][0][2])
+          const x = geom[0][0]
+          const y = geom[0][1]
+          const point = new Graphic({
+            geometry: {
+              type: "point", 
+              longitude: x,
+              latitude: y
+            }
+          })
+          let ptBuff = geometryEngine.buffer(point, radius, "miles");
+          console.log(ptBuff)
+          console.log(geom[0][0][2])
         }
   }
 }
