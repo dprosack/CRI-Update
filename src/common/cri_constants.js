@@ -1,3 +1,4 @@
+import Graphic from "@arcgis/core/Graphic";
 
 export const criConstants = {
 
@@ -18,5 +19,28 @@ export const criConstants = {
     fmeurl: 'http://api.fmeserver.com/js/v3/FMEServer.js',
     design: [{num:'1', name:'One Way'}, {num:'2',name:'Two Way'}, {num:'3',name:'Boulevard'}],
     surface: [{num:10, name:'Paved'}, {num:11, name:'Brick'},{num:12, name:'Dirt/Natural'},{num:13, name:'Gravel'},{num:2, name:'Concrete'}],
-    testRoadInfo: [{type:"Paved",bdfo:'0', edfo:'12'},{type:"Brick",bdfo:'12', edfo:'24'}]
+    testRoadInfo: [{type:"Paved",bdfo:'0', edfo:'12'},{type:"Brick",bdfo:'12', edfo:'24'}],
+
+    startPoint: new Graphic({
+        geometry: {
+          type: "point",
+          longitude: 0,
+          latitude: 0
+        },
+        symbol:{
+          type: "simple-marker",
+          color: "#8DB600",
+        }
+    }),
+    endPoint: new Graphic({
+        geometry: {
+          type: "point",
+          longitude: 0,
+          latitude: 0
+        },
+        symbol:{
+          type: "simple-marker",
+          color: "#E32636",
+        }
+    })
 }

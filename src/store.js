@@ -8,7 +8,7 @@ export const roadInfo = {
     cntyName:'',
     cntyNmbr: 0,
     cntyMiles:0,
-    count:false,
+    count:0,
 
     get getObjectId(){
        return this.objectid

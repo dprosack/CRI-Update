@@ -158,11 +158,22 @@ export const sketch = new Sketch({
           width: 2,
           style: "dash"
         }
-    })
-    // SnappingOptions: new SnappingOptions({
-    //     enabled: true,
-    //     featureSources: [featLayer]
-    // })
+    }),
+    snappingOptions: {
+        enabled: true,
+        featureSources: [{ layer: gLayer, enabled: true, featureEnabled: true }],
+        distance: 20
+    }
+});
+
+export const sketchPoint = new Sketch({
+    view: view,
+    layer: rdbdAsset,
+    viewModel: new SketchViewModel({
+        view: view,
+        layer: rdbdAsset
+    }),
+   
 });
 
   //add portal service to map

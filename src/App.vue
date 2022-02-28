@@ -9,7 +9,7 @@
 <script>
 import {countyInfo} from './components/Map/editFunc'
 //import Login from './views/Login.vue'
-
+// import {roadInfo} from './store.js'
 export default {
     name: 'App',
     //components: {Login},
@@ -17,7 +17,7 @@ export default {
     mounted(){
       //this.$router.push('/login')
       countyInfo().then(result => {result.response === true ? this.$router.push({ name: 'MileSign', params: { id: result.nbr}}) : this.$router.push('/catchAll(.*)')})
-      
+      //roadInfo();
     }
 }
 </script>

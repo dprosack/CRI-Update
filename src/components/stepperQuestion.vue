@@ -330,11 +330,6 @@ export default {
         console.log(Fsrfc)
         return Fsrfc
       },
-      getCount:{
-        get(){
-          return roadInfo.getCount
-        }
-      },
     }
 }
 </script>

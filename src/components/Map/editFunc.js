@@ -1,5 +1,5 @@
 //import const from map.js
-import {sketch, view, featLayer, gLayer, countyOfficialInfo, map, rdbdSrfcAsst, rdbdDsgnAsst, rdbdNameAsst, rdbdLaneAsst, editsLayer,rdbdSrfcGeom} from '../Map/map'
+import {sketch, view, featLayer, gLayer, countyOfficialInfo, map, rdbdSrfcAsst, rdbdDsgnAsst, rdbdNameAsst, rdbdLaneAsst, editsLayer,rdbdAsset} from '../Map/map'
 import {cntyNbrNm} from '../../common/txCnt'
 import {roadInfo} from '../../store'
 //esri js geometry engine import
@@ -8,6 +8,8 @@ import Graphic from "@arcgis/core/Graphic";
 import Query from "@arcgis/core/rest/support/Query";
 import OAuthInfo from "@arcgis/core/identity/OAuthInfo";
 import esriId from "@arcgis/core/identity/IdentityManager";
+import * as webMercatorUtils from "@arcgis/core/geometry/support/webMercatorUtils"
+import * as geodesicUtils from "@arcgis/core/geometry/support/geodesicUtils";
 import { criConstants } from '../../common/cri_constants';
 
 //add login info
@@ -70,7 +72,7 @@ async function queryFeatureTables(tblqry){
 export async function countyInfo(){
   let countyInfoPromise =  new Promise(function(res){
     let queryUrl = window.location.href
-    let crInfo = queryUrl.split('http://localhost:8080/')[1]
+    let crInfo = queryUrl.split('https://dprosack.github.io/DUSAPrototype')[1]
     //console.log(crInfo.toString())
     for (let j=0; j < cntyNbrNm.length; j++){
       console.log(cntyNbrNm[j][crInfo])
@@ -200,13 +202,15 @@ function defineGraphic(graphics, clickType){
   })
   let objectidList = [];
   gLayer.graphics.add(newGraphic);
-  console.log(gLayer)
+  console.log(gLayer.graphics)
+  
   for(let id in gLayer.graphics.items)
     if(gLayer.graphics.items[id].attributes !== null){
       objectidList.push(gLayer.graphics.items[id].attributes.gid)
     }
+    console.log(objectidList)
     featLayer.definitionExpression = `gid not in (${objectidList}) and cnty_nm = '${roadInfo.getcntyName}'`
-    rdbdSrfcGeom.definitionExpression = `gid not in (${objectidList}) and cnty_nm = '${roadInfo.getcntyName}'`
+    //rdbdSrfcGeom.definitionExpression = `gid not in (${objectidList}) and cnty_nm = '${roadInfo.getcntyName}'`
   }
 }
 
@@ -371,199 +375,256 @@ export function saveInfo(id){
   });
 }
 
-// export function getCoordsRange(y){
-//   console.log(y)
-//   for(let id in gLayer.graphics.items){
-//     for(let fo in rdbdAsset.graphics.items)
-//     if(gLayer.graphics.items[id].attributes.objectid === rdbdAsset.graphics.items[fo].attributes.objectid){
-//       rdbdAsset.removeMany(rdbdAsset.graphics)
-//     }
-//   }
-//   //let x = gLayer.graphics.items[0].geometry.paths[0]
-//   let dens;
-//   for(let id in gLayer.graphics.items){
-//     if(gLayer.graphics.items[id].attributes.objectid === y[0].objectid){
-//       dens = geometryEngine.densify(gLayer.graphics.items[id].geometry,.1)
-//     }
-//   }
-//   console.log(dens)
-//   let densUpdate = dens.paths[0]
+function createAssetGraph(pathArr,y){
+  console.log(y)
+  console.log(pathArr.paths[0].length)
+  //let x = gLayer.graphics.items[0].geometry.paths[0]
+  // let dens;
+  // for(let id in gLayer.graphics.items){
+  //   if(gLayer.graphics.items[id].attributes.objectid === y[0].objectid){
+  //     dens = geometryEngine.densify(gLayer.graphics.items[id].geometry,.1)
+  //   }
+  // }
+  // console.log(dens)
+  let densUpdate = pathArr.paths[0]
   
-//   let mArr = [];
-//   if(mArr.length){
-//     mArr.length = 0
-//   }
+  let mArr = [];
+  if(mArr.length){
+    mArr.length = 0
+  }
 
-//   for(let i = 0; i < densUpdate.length; i++){
-//     //console.log(x[i][2])
-//     mArr.push(densUpdate[i][2]) //mval
-//   }
-//   for(let d in y){
-//     console.log(y[d].srfcType)
-//     if(y[d].srfcType === 'Paved'){
-//       let getstart = (element) => element >= y[d].AssetBeginDfo;
-//       let endstart = (element) => element >= y[d].AssetEndDfo;
-//       console.log(mArr.findIndex(getstart))
-//       console.log(mArr.findIndex(endstart))
-//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
-//       console.log(geom)
-//       let pavement = new Graphic({
-//         geometry: {
-//           type: "polyline",
-//           paths: geom,
-//           hasM: true,
-//           spatialReference: {
-//             wkid: 3857
-//           }
-//         },
+  for(let i = 0; i < densUpdate.length; i++){
+    //console.log(x[i][2])
+    mArr.push(parseFloat(densUpdate[i][2]).toFixed(3)) //mval
+  }
+  for(let d in y){
+    console.log(y[d].srfcType)
+    if(y[d].srfcType === 'Paved'){
+      let getstart = (element) => element >= y[d].AssetBeginDfo;
+      let endstart = (element) => element >= y[d].AssetEndDfo;
+      console.log(mArr.findIndex(getstart))
+      console.log(mArr.findIndex(endstart))
+      let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart)+1)
+      console.log(geom)
+      let pavement = new Graphic({
+        geometry: {
+          type: "polyline",
+          paths: geom,
+          hasM: true,
+          spatialReference: {
+            wkid: 3857
+          }
+        },
     
-//         attributes: {
-//           objectid: gLayer.graphics.items[0].attributes.objectid,
-//         },
+        attributes: {
+          objectid: gLayer.graphics.items[0].attributes.objectid,
+        },
                   
-//         symbol: {
-//           type: "simple-line",
-//           color: '#8DB600',
-//           width: 10,
-//           style: "solid"
-//         }
-//       })
-//       rdbdAsset.graphics.add(pavement);
-//     }
-//     else if(y[d].srfcType === 'Gravel'){
-//       let getstart = (element) => element >= y[d].AssetBeginDfo;
-//       let endstart = (element) => element >= y[d].AssetEndDfo;
-//       console.log(mArr.findIndex(getstart))
-//       console.log(mArr.findIndex(endstart))
-//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
-//       console.log(geom)
-//       let gravel = new Graphic({
-//         geometry: {
-//           type: "polyline",
-//           paths: geom,
-//           hasM: true,
-//           spatialReference: {
-//             wkid: 3857
-//           }
-//         },
+        symbol: {
+          type: "simple-line",
+          color: '#8DB600',
+          width: 10,
+          style: "solid"
+        }
+      })
+      rdbdAsset.graphics.add(pavement);
+    }
+    else if(y[d].srfcType === 'Gravel'){
+      let getstart = (element) => element >= y[d].AssetBeginDfo;
+      let endstart = (element) => element >= y[d].AssetEndDfo;
+      console.log(mArr.findIndex(getstart))
+      console.log(mArr.findIndex(endstart))
+      let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart)+1)
+      console.log(geom)
+      let gravel = new Graphic({
+        geometry: {
+          type: "polyline",
+          paths: geom,
+          hasM: true,
+          spatialReference: {
+            wkid: 3857
+          }
+        },
     
-//         attributes: {
-//           objectid: gLayer.graphics.items[0].attributes.objectid,
-//         },
+        attributes: {
+          objectid: gLayer.graphics.items[0].attributes.objectid,
+        },
                   
-//         symbol: {
-//           type: "simple-line",
-//           color: '#4B5320',
-//           width: 10,
-//           style: "solid"
-//         }
-//       })
-//       rdbdAsset.graphics.add(gravel);
-//     }
-//     else if(y[d].srfcType === 'Dirt/Natural'){
-//       let getstart = (element) => element >= y[d].AssetBeginDfo;
-//       let endstart = (element) => element >= y[d].AssetEndDfo;
-//       console.log(mArr.findIndex(getstart))
-//       console.log(mArr.findIndex(endstart))
-//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
-//       console.log(geom)
-//       let dirtNatural = new Graphic({
-//         geometry: {
-//           type: "polyline",
-//           paths: geom,
-//           hasM: true,
-//           spatialReference: {
-//             wkid: 3857
-//           }
-//         },
+        symbol: {
+          type: "simple-line",
+          color: '#4B5320',
+          width: 10,
+          style: "solid"
+        }
+      })
+      rdbdAsset.graphics.add(gravel);
+    }
+    else if(y[d].srfcType === 'Dirt/Natural'){
+      let getstart = (element) => element >= y[d].AssetBeginDfo;
+      let endstart = (element) => element >= y[d].AssetEndDfo;
+      console.log(mArr.findIndex(getstart))
+      console.log(mArr.findIndex(endstart))
+      let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart)+1)
+      console.log(geom)
+      let dirtNatural = new Graphic({
+        geometry: {
+          type: "polyline",
+          paths: geom,
+          hasM: true,
+          spatialReference: {
+            wkid: 3857
+          }
+        },
     
-//         attributes: {
-//           objectid: gLayer.graphics.items[0].attributes.objectid,
-//         },
+        attributes: {
+          objectid: gLayer.graphics.items[0].attributes.objectid,
+        },
                   
-//         symbol: {
-//           type: "simple-line",
-//           color: '#FFD12A',
-//           width: 10,
-//           style: "solid"
-//         }
-//       })
-//       rdbdAsset.graphics.add(dirtNatural);
-//     }
-//     else if(y[d].srfcType === 'Concrete'){
-//       let getstart = (element) => element >= y[d].AssetBeginDfo;
-//       let endstart = (element) => element >= y[d].AssetEndDfo;
-//       console.log(mArr.findIndex(getstart))
-//       console.log(mArr.findIndex(endstart))
-//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
-//       console.log(geom)
-//       let concrete = new Graphic({
-//         geometry: {
-//           type: "polyline",
-//           paths: geom,
-//           hasM: true,
-//           spatialReference: {
-//             wkid: 3857
-//           }
-//         },
+        symbol: {
+          type: "simple-line",
+          color: '#FFD12A',
+          width: 10,
+          style: "solid"
+        }
+      })
+      rdbdAsset.graphics.add(dirtNatural);
+    }
+    else if(y[d].srfcType === 'Concrete'){
+      let getstart = (element) => element >= y[d].AssetBeginDfo;
+      let endstart = (element) => element >= y[d].AssetEndDfo;
+      console.log(mArr.findIndex(getstart))
+      console.log(mArr.findIndex(endstart))
+      let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart)+1)
+      console.log(geom)
+      let concrete = new Graphic({
+        geometry: {
+          type: "polyline",
+          paths: geom,
+          hasM: true,
+          spatialReference: {
+            wkid: 3857
+          }
+        },
     
-//         attributes: {
-//           objectid: gLayer.graphics.items[0].attributes.objectid,
-//         },
+        attributes: {
+          objectid: gLayer.graphics.items[0].attributes.objectid,
+        },
                   
-//         symbol: {
-//           type: "simple-line",
-//           color: '#000000',
-//           width: 10,
-//           style: "solid"
-//         }
-//       })
-//       rdbdAsset.graphics.add(concrete);
-//     }
-//     else if(y[d].srfcType === 'Brick'){
-//       let getstart = (element) => element >= y[d].AssetBeginDfo;
-//       let endstart = (element) => element >= y[d].AssetEndDfo;
-//       console.log(mArr.findIndex(getstart))
-//       console.log(mArr.findIndex(endstart))
-//       let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart))
-//       console.log(geom)
-//       let brick = new Graphic({
-//         geometry: {
-//           type: "polyline",
-//           paths: geom,
-//           hasM: true,
-//           spatialReference: {
-//             wkid: 3857
-//           }
-//         },
+        symbol: {
+          type: "simple-line",
+          color: '#000000',
+          width: 10,
+          style: "solid"
+        }
+      })
+      rdbdAsset.graphics.add(concrete);
+    }
+    else if(y[d].srfcType === 'Brick'){
+      let getstart = (element) => element >= y[d].AssetBeginDfo;
+      let endstart = (element) => element >= y[d].AssetEndDfo;
+      console.log(mArr.findIndex(getstart))
+      console.log(mArr.findIndex(endstart))
+      let geom = densUpdate.slice(mArr.findIndex(getstart), mArr.findIndex(endstart)+1)
+      console.log(geom)
+      let brick = new Graphic({
+        geometry: {
+          type: "polyline",
+          paths: geom,
+          hasM: true,
+          spatialReference: {
+            wkid: 3857
+          }
+        },
     
-//         attributes: {
-//           objectid: gLayer.graphics.items[0].attributes.objectid,
-//         },
+        attributes: {
+          objectid: gLayer.graphics.items[0].attributes.objectid,
+        },
                   
-//         symbol: {
-//           type: "simple-line",
-//           color: '#CC0000',
-//           width: 10,
-//           style: "solid"
-//         }
-//       })
-//       rdbdAsset.graphics.add(brick);
-//     }
-//   }
+        symbol: {
+          type: "simple-line",
+          color: '#CC0000',
+          width: 10,
+          style: "solid"
+        }
+      })
+      rdbdAsset.graphics.add(brick);
+    }
+  }
+}
   
   
-// }
+function newDfoMeasurement(y)
+{
+  console.log(y)
+  sketch.on("update",function(event){
+    if(event.state === "complete" && event.graphics[0].geometry.type === "point"){
+      let objid;
+      let pointA = new Graphic({
+        geometry:{
+          type: "point",
+          longitude: event.graphics[0].geometry.x,
+          latitude: event.graphics[0].geometry.y
+        }
+      })
+      let webMercaPointA = webMercatorUtils.webMercatorToGeographic(pointA.geometry)
+      for(let id in gLayer.graphics.items){
+        if((gLayer.graphics.items[id].attributes.objectid === event.graphics[0].attributes.objectid) && gLayer.graphics.items[id].geometry.type === "polyline"){
+          objid = gLayer.graphics.items[id].geometry
+        }
+      }
+      let index = geometryEngine.nearestVertex(objid, pointA.geometry).vertexIndex
+      console.log(typeof index, index+1)
+      
+      console.log(objid.paths[0])
+      let path = objid.paths[0].slice(index, index+2)
+      console.log(path)
+      let pointB = new Graphic({
+        geometry:{
+          type: "point",
+          longitude: path[0][0],
+          latitude: path[0][1]
+        }
+      })
+     
+    
+      let copyGeom = objid.paths[0]
+      console.log(copyGeom)
+      let arr = []
+      for(let z=0; z < copyGeom.length; z++){
+        console.log(copyGeom[z][2])
+        arr.push(copyGeom[z][2])
+      }
+      console.log(arr)
+      let webMercaPointB = webMercatorUtils.webMercatorToGeographic(pointB.geometry)
+      const pointAPointB = geodesicUtils.geodesicDistance(webMercaPointA, webMercaPointB)
+      console.log(pointAPointB)
+      let newDfo = path[0][2] + (pointAPointB.distance/1609.344);
+      let getdfoIndex = (element) => element >= path[0][2];
+      let getChallengeIndex = arr.findIndex(getdfoIndex)
+      console.log(getChallengeIndex)
+      let indexPost = newDfo > path[0][2] ? getChallengeIndex +1 : getChallengeIndex-1
+      console.log(indexPost)
+      console.log(newDfo)
+      console.log(path[0][2])
+      
+      let newGeom = objid.insertPoint(0,indexPost, [event.graphics[0].geometry.x, event.graphics[0].geometry.y, newDfo])
+      createAssetGraph(newGeom, y)
+    }
+  })
+}
 
 export function getCoordsRange(y){
   console.log(y)
   let dens;
+  console.log(gLayer)
   for(let id in gLayer.graphics.items){
-        if(gLayer.graphics.items[id].attributes.objectid === y[0].objectid){
-          dens = gLayer.graphics.items[id].geometry
-        }
+    if(gLayer.graphics.items[id].attributes.objectid === y[0].objectid){
+      console.log(gLayer.graphics.items[id])
+      dens = gLayer.graphics.items[id].geometry
+    }
   }
   let densUpdate = dens.paths[0];
+  console.log(densUpdate)
   let mArr = [];
   if(mArr.length){
     mArr.length = 0
@@ -572,68 +633,108 @@ export function getCoordsRange(y){
     //console.log(x[i][2])
     mArr.push(densUpdate[i][2]) //mval
   }
+  // let startPoint = new Graphic({
+  //   geometry: {
+  //     type: "point",
+  //     longitude: densUpdate[0][0],
+  //     latitude: densUpdate[0][1]
+  //   }
+  // })
+
+  // let endPoint = new Graphic({
+  //   geometry: {
+  //     type: "point",
+  //     longitude: densUpdate[densUpdate.length - 1][0],
+  //     latitude: densUpdate[densUpdate.length - 1][1]
+  //   }
+  // })  
+  //let start = webMercatorUtils.webMercatorToGeographic(startPoint.geometry);
+  //let end = webMercatorUtils.webMercatorToGeographic(endPoint.geometry);
+  //view.graphics.add(criConstants.startPoint.geometry.longitude = start.x, criConstants.startPoint.geometry.latitude = start.y);
+  //view.graphics.add(criConstants.endPoint.geometry.longitude = end.x, criConstants.endPoint.geometry.latitude = end.y);
+
+  ////////////////////////Begin new Function///////////////////////////////////////////////////
   for(let d in y){
-        console.log(y[d].srfcType)
-        if(y[d].srfcType === 'Paved'){
-          let getstart = (element) => element >= y[d].AssetBeginDfo;
-          let endstart = (element) => element >= y[d].AssetEndDfo;
-          console.log(mArr.findIndex(getstart))
-          console.log(mArr.findIndex(endstart)-1)
-          console.log(mArr.findIndex(endstart))
-          let geom = densUpdate.slice(mArr.findIndex(endstart)-1,mArr.findIndex(endstart)+1)
-          console.log(geom[0][2])
-          const radius = Math.abs(geom[0][2] - y[d].AssetEndDfo)
-          console.log(radius)
-          const x = geom[0][0]
-          const y = geom[0][1]
-          const point = new Graphic({
-            geometry: {
-              type: "point", 
-              longitude: x,
-              latitude: y
-            }
-          })
-          let ptBuff = geometryEngine.buffer(point, radius, "miles");
-          console.log(ptBuff)
-          console.log(geom[0][0][2])
+    console.log(y[d].srfcType)
+    let getstart = (element) => element >= y[d].AssetBeginDfo;
+    let endstart = (element) => element >= y[d].AssetEndDfo;
+    console.log(mArr.findIndex(getstart))
+    console.log(mArr.findIndex(endstart)-1)
+    console.log(mArr.findIndex(endstart))
+    let geom = densUpdate.slice(mArr.findIndex(endstart)-1,mArr.findIndex(endstart)+1)
+    
+    console.log(geom)
+    const radius = (Math.abs(geom[0][2] - y[d].AssetEndDfo)) * 1609.344
+    console.log(radius)
+    const pointA =  new Graphic({
+       geometry: {
+          type: "point", 
+          longitude: geom[0][0],
+          latitude: geom[0][1]
+        },
+    })
+    const pointB = new Graphic({
+      geometry: {
+        type: "point", 
+        longitude: geom[1][0],
+        latitude: geom[1][1]
+      },
+    })
+    let a = webMercatorUtils.webMercatorToGeographic(pointA.geometry)
+    let b = webMercatorUtils.webMercatorToGeographic(pointB.geometry)
+          
+    const findAzmith = geodesicUtils.geodesicDistance(a, b)
+    const newDFO = geodesicUtils.pointFromDistance(a, radius,findAzmith.azimuth)
+    console.log(newDFO.x, newDFO.y, y[d].srfcType)
+    const geoToMerca = webMercatorUtils.geographicToWebMercator(newDFO)
+////////////////////////End new Function///////////////////////////////////////////////////
+    //console.log(dens.insertPoint(0,mArr.findIndex(endstart), [geoToMerca.x, geoToMerca.y, y[d].AssetEndDfo]))
+    let assetType = y[d].srfcType
+    let pointColor;
+    switch(assetType){
+      case "Paved":
+        pointColor = "#5D8AA8"		
+      break;
+      case "Brick":
+        pointColor = "#E32636"
+      break;
+      case "Dirt/Natural":
+        pointColor = "#98777B"
+      break;
+      case "Gravel":
+        pointColor = "#848482"
+      break;
+      case "Concrete":
+        pointColor = "#000000"
+    } 
+
+    const assetSym = {
+      type: "simple-marker",
+      color: pointColor
+    }
+    console.log(geoToMerca)
+    let assetPoint = new Graphic({
+      geometry: {
+        type: "point",
+        hasM: true,
+        longitude: newDFO.x,
+        latitude: newDFO.y,
+        spatialReference: {
+          wkid: 3857
         }
+      },
+      attributes: {
+        objectid: y[d].objectid,
+        assetTyp: assetType
+      },
+      symbol: assetSym
+    })
+
+    rdbdAsset.graphics.add(assetPoint)
   }
+  newDfoMeasurement(y);
 }
 
-// function makeCircle(){
-//   console.log(gLayer.graphics.items[0].geometry)
-//   const circleGeometry = new Circle({
-//     center: [-97.304121,30.053685],
-//     geodesic: true,
-//     numberOfPoints: 100,
-//     radius: .703,
-//     radiusUnit: "miles"
-//   });
-//   console.log(circleGeometry)
-//   let circleLine = new Polyline({
-//       paths: circleGeometry.rings,
-//       spatialReference: {
-//         wkid: 3857
-//       }
-//     })
-//   const geometries = geometryEngine.cut(circleGeometry, gLayer.graphics.items[0].geometry);
-//   console.log(geometries,circleLine)
-//   gLayer.graphics.add(new Graphic({
-//     type: "polyline",
-//     geometry: circleGeometry,
-//     spatialReference: {
-//       wkid: 3857
-//     },
-//     symbol: {
-//       type: "simple-fill",
-//       style: "none",
-//       outline: {
-//         width: 3,
-//         color: "red"
-//       }
-//     }
-//   }));
-// }
 // export async function getFeature(){
 //   let getGraphPromise = new Promise(function(resp){
 //       view.on("immediate-click", function(event){
