@@ -1,7 +1,7 @@
 import Graphic from "@arcgis/core/Graphic";
 
 export const criConstants = {
-
+  
     portalUrl: "https://testportal.txdot.gov/sstestarcgis/rest/services/Hosted/cri_dev/FeatureServer/0",
     refernceLayer: "https://testportal.txdot.gov/sstestarcgis/rest/services/Hosted/CRI_Ref_Layers/FeatureServer/0",
     editsLayer: "https://testportal.txdot.gov/sstestarcgis/rest/services/Hosted/CRI_Edits/FeatureServer/0",

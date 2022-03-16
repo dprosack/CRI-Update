@@ -10,8 +10,7 @@ import Map from '../components/Map/Map.vue'
 import {roadInfo} from '../store'
 export default {
     name: 'MapHome',
-    components: {Map
-    },
+    components: {Map},
     props:["id"],
     mounted(){
       roadInfo

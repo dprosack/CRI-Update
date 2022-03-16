@@ -2,7 +2,6 @@
     <v-footer class="footer"
     color="primary lighten-1"
   >
-
     <v-row
       justify="center"
       no-gutters

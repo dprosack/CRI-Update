@@ -134,7 +134,7 @@
       </div>
         <v-spacer></v-spacer>
         <v-alert style="left:15px; top:5px" borderd="bottom" type="info" v-html="certiAlert" max-width=550></v-alert>
-
+    
     </v-card>
     </v-dialog>
     </v-row>

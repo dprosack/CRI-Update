@@ -13,11 +13,12 @@ import * as watchUtils from "@arcgis/core/core/watchUtils";
 
 export const gLayer = new GraphicsLayer();
 export const delgLayer = new GraphicsLayer();
-export const rdbdAsset = new GraphicsLayer();
+export const rdbdAssetPt = new GraphicsLayer();
+export const rdbdAssetLine = new GraphicsLayer();
 
 export const map = new Map({
     basemap: criConstants.basemap,
-    layers: [gLayer,rdbdAsset]
+    layers: [rdbdAssetLine,rdbdAssetPt,gLayer]
 });
 
 export const view = new MapView({
@@ -148,7 +149,7 @@ export const countyOfficialInfo = new FeatureLayer({
 
 export const sketch = new Sketch({
     view: view,
-    layer: gLayer,
+    layer: [gLayer],
     viewModel: new SketchViewModel({
         view: view,
         layer: gLayer,
@@ -159,20 +160,19 @@ export const sketch = new Sketch({
           style: "dash"
         }
     }),
+});
+
+export const sketchPoint = new Sketch({
+    view: view,
+    viewModel: new SketchViewModel({
+        layer: delgLayer,
+        view: view
+    }),
     snappingOptions: {
         enabled: true,
         featureSources: [{ layer: gLayer, enabled: true, featureEnabled: true }],
         distance: 20
     }
-});
-
-export const sketchPoint = new Sketch({
-    view: view,
-    layer: rdbdAsset,
-    viewModel: new SketchViewModel({
-        view: view,
-        layer: rdbdAsset
-    }),
    
 });
 
@@ -183,7 +183,7 @@ watchUtils.whenOnce(view,"ready").then(
 function stopEvtPropagation(event) {
     event.stopPropagation();
 }
-
+//TODO - disable graphics from drag, resize, flip, keyboard shortcuts
 view.on('double-click', stopEvtPropagation)
 view.ui.remove("zoom")  
 

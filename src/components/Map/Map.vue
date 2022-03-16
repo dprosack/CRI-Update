@@ -28,8 +28,8 @@
                 &nbsp; &nbsp; &nbsp; Previous Total Mileage: {{countyTotal}}&nbsp;&nbsp;&nbsp; 
                 Current Mileage: {{currentMiles}}&nbsp;&nbsp;&nbsp; 
                 New Total Miles: {{countyTots}}</p></v-card-text>
-                <v-btn elevation=0 style="bottom:65px; right: 44%">Criteria</v-btn>
-                <v-btn elevation=0 style="bottom:65px; right: 43%">About</v-btn>
+                <v-btn elevation=0 style="bottom:65px; right:44%">Criteria</v-btn>
+                <v-btn elevation=0 style="bottom:65px; right:43%">About</v-btn>
                 </v-card>
             </div>
         <div id="step"><stepper :received="editTest"/></div>
@@ -78,7 +78,7 @@ export default {
             addButton: "add Road",
             previousTotal: 0,
             county:  roadInfo.getcntyName,
-            username: 'DPROSACK',
+            username: 'DPROSACK', //TODO Dynamic
             countyTotal: roadInfo.getcntyMiles,
             lineLength: {},
             newMiles: '',
@@ -87,9 +87,9 @@ export default {
             editTest: false,
         }
     },
-    async mounted() {
+    async mounted() { //async waits for map to load
         const app = await import('../Map/map');
-        app.initialize(this.$el); 
+        app.initialize(this.$el); //assigns esri map to the container
         zoomExtents();
         hightlightFeat();
         //console.log(this.captureMiles)
@@ -102,13 +102,12 @@ export default {
     
             //this.editTest = false
             console.log(this.editTest)
-            })
+            })            
         },
         cancelEditing(){
             stopEditing();
             //this.editTest = true
             console.log(this.editTest)
-            
         },
         expand(){
             if (document.getElementById("step").style.width==='0px'){
@@ -140,11 +139,12 @@ export default {
             document.getElementById("step").style.width='450px'
             
         },
-
+       // converts refLayer to graphicsLayer
+       
         modifyLine:{
              handler: async function(){
                 let modify = await modifyRoadbed("double-click")
-                this.editTest = true
+                this.editTest = true;
                 this.modifyLine += parseFloat(geometryEngine.geodesicLength(modify.features[0].geometry, "miles").toFixed(3))
                 console.log(modify.features[0].geometry)
                 
@@ -170,7 +170,7 @@ export default {
         currentMiles: function(){
             return Number(this.previousTotal) + Number(this.modifyLength)
         },
-        getCount:{
+        getCount:{//testing function; not working
             get(){
                 return roadInfo.getCount
             },   

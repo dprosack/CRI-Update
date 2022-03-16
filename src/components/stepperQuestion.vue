@@ -8,12 +8,14 @@
     <v-stepper-step
       editable
       :complete="e1 > 1"
-      step="1">
+      step="1"
+      @click="removeAsstPt()">
       Road Name: 
       <small>Fill out this form to complete editing your road.</small>
     </v-stepper-step>
 
     <v-stepper-content step="1">
+      <!-- Disable dictates whether fields in the stepper form are editable or not.  -->
       <v-card><v-text-field v-model="roadbedName" label="Road Name" :disabled="graphic ? disabled : ''"></v-text-field>
       </v-card>
       <v-btn
@@ -29,11 +31,13 @@
     <v-stepper-step
       editable
       :complete="e1 > 2"
-      step="2">
+      step="2"
+      @click="removeAsstPt()">
       Road Design
     </v-stepper-step>
 
     <v-stepper-content step="2">
+      <!-- Ternery statement if disabled property = true and graphic property = true then disable the v-select tag -->
       <v-card><v-select v-model="roadbedDesign" :items="design" label="Design" outlined filled :disabled="graphic ? disabled : ''"></v-select>
       </v-card>
       <v-btn
@@ -48,13 +52,15 @@
     <v-stepper-step
       editable
       :complete="e1 > 3"
-      step="3">
+      step="3"
+      @click="executeDFOgraph('point')"> <!-- Get asset breaks and draw graphic points -->
       Road Surface
     </v-stepper-step>
     <v-stepper-content step="3">
-      
+        <!-- If graphic is clicked (true), it presents this form -->
         <v-card  v-if='graphic===true'>
           <div class="scroller"> 
+          <!-- Loop through asset breaks assigned in rdbdSurf. Assign surface type lable and dfo values -->
           <v-col v-for="(item,index) in rdbdSurf" :key="index" >
           <v-select :items="surface" label="Road Surface" outlined v-model="item.srfc_type_id"></v-select> <!-- //v-model="roadbedSurface" -->
           <v-row>
@@ -62,19 +68,21 @@
                  <v-text-field label='A' v-model="item.asset_ln_begin_dfo_ms"></v-text-field>
                </v-col>
                <v-col sm="6">
-                 <v-text-field label='B' v-model="item.asset_ln_end_dfo_ms"></v-text-field>
+                 <v-text-field label='B' v-model="item.asset_ln_end_dfo_ms"></v-text-field><v-btn id="editedfo" icon x-small elevation=0 @click="executeDFOgraph('draw',item.asset_ln_end_dfo_ms)"><v-icon>mdi-pencil</v-icon></v-btn>
                </v-col>
           </v-row>
-          <v-btn id="currentSurf"><img src="..\assets\outline_delete_black_24dp.png" @click="deleteSurface()"></v-btn>
+          <!-- Deletes asset break in the form -->
+          <v-btn id="currentSurf"><img src="..\assets\outline_delete_black_24dp.png" @click="deleteSurface()"></v-btn> 
           </v-col>
-        <v-card v-for="(item,index) in mileInfo" :key="index">
+          <!-- Adds new asset breaks to form based on mileInfo array (populated by user click addRoadSurface function) -->
+        <v-card v-for="(item,index) in mileInfo" :key="index" >
             <v-select :items="surface" label="Road Surface" outlined v-model="item.srfc_type_id"></v-select>
             <v-row>
                <v-col>
-                 <v-text-field  label='A' v-model="item.asset_ln_begin_dfo_ms"></v-text-field><v-btn id="editbdfo" icon x-small elevation=0><v-icon>mdi-pencil</v-icon></v-btn>
+                 <v-text-field  label='A' v-model="item.asset_ln_begin_dfo_ms"></v-text-field>
                </v-col>
                <v-col sm="6">
-                 <v-text-field label='B' v-model="item.asset_ln_end_dfo_ms"></v-text-field><v-btn id="editedfo" icon x-small elevation=0><v-icon>mdi-pencil</v-icon></v-btn>
+                 <v-text-field label='B' v-model="item.asset_ln_end_dfo_ms"></v-text-field><v-btn id="editedfo1" icon x-small elevation=0 @click="executeDFOgraph('draw',item.asset_ln_end_dfo_ms)"><v-icon>mdi-pencil</v-icon></v-btn>
                </v-col>
             </v-row>
             <v-btn id="addSurf"><img src="..\assets\outline_delete_black_24dp.png" @click="deleteSurface()"></v-btn>
@@ -83,6 +91,7 @@
         </div>
         <v-btn color="pink" @click="addRoadSurface">add additional Road Surface Types</v-btn>
         </v-card>
+        <!-- Form disabled on single click of reference layer in map (read only)  -->
         <v-card  v-if='graphic===false'>
           <div class="scroller">
           <v-col v-for="(item,index) in fRdbdSurf" :key="index">
@@ -100,7 +109,7 @@
         </v-card>
         <v-btn
             color="primary"
-            @click="e1 = 4; executeDFOgraph()">
+           @click="e1 = 4;">
             Continue
         </v-btn>
         <v-btn @click="cancel()" text>
@@ -108,7 +117,7 @@
         </v-btn>
     </v-stepper-content>
 
-    <v-stepper-step step="4" editable>
+    <v-stepper-step step="4" editable @click="removeAsstPt()">
       Number of Lanes
     </v-stepper-step>
     <v-stepper-content step="4">
@@ -124,10 +133,11 @@
       </v-btn>
     </v-stepper-content>
 
-    <v-stepper-step step="5" editable>
+    <v-stepper-step step="5" editable @click="removeAsstPt()">
       Completed?
     </v-stepper-step>
     <v-stepper-content step="5">
+      <!-- Send Asset/geometry edits to editFunc.js function -->
       <v-btn
         color="primary" @click="saveAttri()" :disabled="graphic ? disabled : ''">
         Save Edits
@@ -142,7 +152,7 @@
 
 <script>
 //import { criConstants } from '../common/cri_constants';
-import { getGraphic, modifyRoadbed, saveInfo,getCoordsRange} from '../components/Map/editFunc'
+import { getGraphic, modifyRoadbed, saveInfo,getCoordsRange, updateAsset, addAssetBreakPts, removeAsstPoints} from '../components/Map/editFunc'
 import {roadInfo} from '../store'
 //import Map from '../components/Map/Map.vue'
 
@@ -150,7 +160,7 @@ import {roadInfo} from '../store'
 export default {
     name:"stepper",
     props:{
-      received:Boolean
+      received: Boolean
     },
     //components: {Map},
     data () {
@@ -179,6 +189,7 @@ export default {
         assetLnInfo: null,
         disabled: false,
         objectid: 0,
+        //working on form validation
         dfoRules:{
           DFO: value => !!value || 'Required',
           gather: value => {
@@ -187,8 +198,6 @@ export default {
             return value
           }
         }
-
-        //bool: ''
       }
     },
     mounted(){
@@ -198,6 +207,7 @@ export default {
       received(){
         console.log(this.received)
       },
+      //Interacting with reference layer
       clickCountF:{ //roadbedName
         handler: async function(){
           const click = "immediate-click"
@@ -208,11 +218,13 @@ export default {
           this.roadbedName = roadInfo.getName
           this.roadbedDesign = roadInfo.getDesign
           this.numLane = roadInfo.getLane
+          this.objectid = roadInfo.getObjectId
           this.clickCountF += countF
           document.getElementById("step").style.width='450px'
         },
         immediate: true,
       },
+      //Interacting with Graphic layer
       clickCount:{
         handler: async function(){
           let countG = await getGraphic(false)
@@ -245,25 +257,47 @@ export default {
     },
 
     methods:{
-      executeDFOgraph(){
+      removeAsstPt(){
+        removeAsstPoints();
+      },
+      executeDFOgraph(x,y){
+        console.log(x)
         const dfoAssets = [];
         if(dfoAssets.length){
           dfoAssets.length = 0
         }
         console.log(dfoAssets)
-        for(let b in this.rdbdSurf){
-          let srfcType = {srfcType: this.rdbdSurf[b].srfc_type_id, AssetBeginDfo: this.rdbdSurf[b].asset_ln_begin_dfo_ms, AssetEndDfo: this.rdbdSurf[b].asset_ln_end_dfo_ms, objectid: this.objectid}
-          dfoAssets.push(srfcType)
+        if(x==='point'){
+          for(let b in this.fRdbdSurf){
+            let srfcType = {srfcType: this.fRdbdSurf[b].srfc_type_id, AssetBeginDfo: this.fRdbdSurf[b].asset_ln_begin_dfo_ms, AssetEndDfo: this.fRdbdSurf[b].asset_ln_end_dfo_ms, objectid: this.objectid}
+            dfoAssets.push(srfcType)
+          }
+          console.log(dfoAssets)
+          getCoordsRange(dfoAssets)
         }
-          
-        for(let z in this.mileInfo){
-          let array = {srfcType: this.mileInfo[z].srfc_type_id, AssetBeginDfo: parseFloat(this.mileInfo[z].asset_ln_begin_dfo_ms), AssetEndDfo: parseFloat(this.mileInfo[z].asset_ln_end_dfo_ms),objectid: this.objectid}
-          dfoAssets.push(array)
+        else if(x==='line'){
+          for(let z in this.rdbdSurf){
+            console.log(this.rdbdSurf[z])
+            let array = {srfcType: this.rdbdSurf[z].srfc_type_id, AssetBeginDfo: parseFloat(this.rdbdSurf[z].asset_ln_begin_dfo_ms), AssetEndDfo: parseFloat(this.rdbdSurf[z].asset_ln_end_dfo_ms),objectid: this.objectid}
+            dfoAssets.push(array)
+          }
+          addAssetBreakPts(dfoAssets)
         }
-        console.log(dfoAssets)
-        getCoordsRange(dfoAssets)
+        else if(x==='draw'){
+          console.log(y)
+          for(let z in this.rdbdSurf){
+            if(this.rdbdSurf[z].asset_ln_end_dfo_ms === y){
+              console.log(this.rdbdSurf[z])
+              let array = {srfcType: this.rdbdSurf[z].srfc_type_id, AssetBeginDfo: parseFloat(this.rdbdSurf[z].asset_ln_begin_dfo_ms), AssetEndDfo: parseFloat(this.rdbdSurf[z].asset_ln_end_dfo_ms),objectid: this.objectid}
+              dfoAssets.push(array)
+            }
+          }
+          console.log(dfoAssets)
+          updateAsset(dfoAssets)
+        }
       },
       getElement(){
+        //delete - Does nothing
         if(document.getElementsByTagName('input') && document.getElementById('dfo')){
           console.log(document.getElementsByTagName('input'))
         }
@@ -272,6 +306,7 @@ export default {
         document.getElementById("step").style.width = '0px'
         console.log(this.getCount)
       },
+      //pushes new blank object row into mileInfo asset form
       addRoadSurface(){
         this.mileInfo.push({
           srfc_type_id:'',
@@ -311,17 +346,18 @@ export default {
           rdbdName: this.roadbedName,
           rdbdDes: this.roadbedDesign,
           rdbdSurfe: JSON.stringify(rdbdSurface),
-          editNm: 'DPROSACK',
+          editNm: 'DPROSACK', //TODO needs to be dynamic
           editDt: new Date().getTime()
         }
         console.log(createObj)
         saveInfo(createObj)
       }
     },
-    computed:{
+    computed:{ //Used to work with the vue properties without modifying them
       rdbdSurf(){
         this.clickCount;
         let srfc = roadInfo.getSurface
+        console.log(srfc)
         return srfc
       },
       fRdbdSurf(){
